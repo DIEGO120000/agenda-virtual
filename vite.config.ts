@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: '/agenda-virtual/', 
   define: {
-    'process.env': {}
+    'process.env.VITE_GEMINI_API_KEY': JSON.stringify(process.env.VITE_GEMINI_API_KEY)
   },
   build: {
     outDir: 'dist'
