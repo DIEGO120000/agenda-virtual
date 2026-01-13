@@ -1,18 +1,14 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './', 
+  base: '/agenda-virtual/', 
   define: {
-    // Inyecta directamente el valor para evitar errores de 'process is not defined'
-    'process.env.API_KEY': JSON.stringify(process.env.API_KEY || '')
+    'process.env': {}
   },
   build: {
     outDir: 'dist',
-    sourcemap: false,
-    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -21,9 +17,5 @@ export default defineConfig({
         }
       }
     }
-  },
-  server: {
-    port: 3000,
-    strictPort: true
   }
 });
