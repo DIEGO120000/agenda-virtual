@@ -8,14 +8,6 @@ export default defineConfig({
     'process.env': {}
   },
   build: {
-    outDir: 'dist',
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-utils': ['lucide-react', 'date-fns', '@google/genai']
-        }
-      }
-    }
+    outDir: 'dist'
   }
 });
