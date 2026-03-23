@@ -113,8 +113,10 @@ export const getAIResponse = async (
 
   // Aseguramos que la instancia sea fresca para cada llamada
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("ERROR_SISTEMA: VITE_GEMINI_API_KEY_NOT_FOUND. Por favor, revisa los Secretos de GitHub.");
+  console.log("DEBUG_API_KEY_STATUS:", apiKey ? "DETECTADA" : "NO_DETECTADA");
+  
+  if (!apiKey || apiKey === "undefined" || apiKey === "") {
+    throw new Error("VITE_GEMINI_API_KEY_NOT_FOUND_IN_ENV");
   }
 
   const genAI = new GoogleGenAI(apiKey);
