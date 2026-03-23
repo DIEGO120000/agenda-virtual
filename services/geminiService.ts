@@ -93,10 +93,7 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  // Aseguramos que la instancia sea fresca para cada llamada
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   const now = new Date();
-  
   const systemInstruction = `
     ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.2.
     TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
@@ -110,7 +107,17 @@ export const getAIResponse = async (
     
     FECHA DEL SISTEMA: ${now.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
     TONO: Seco, ultra-eficiente, técnico.
+    
+    ESTADO ACTUAL: ${JSON.stringify(state)}
   `;
+
+  // Aseguramos que la instancia sea fresca para cada llamada
+  const genAI = new GoogleGenAI(import.meta.env.VITE_GEMINI_API_KEY || "");
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    systemInstruction: systemInstruction,
+    tools: [{ functionDeclarations: tools }],
+  });
 
   try {
     const parts: any[] = [];
@@ -135,17 +142,22 @@ export const getAIResponse = async (
     const triggerText = userPrompt || (audio ? "TRANSCRIPCIÓN Y ACCIÓN REQUERIDA." : "ESPERANDO.");
     parts.push({ text: triggerText });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: [{ parts }],
-      config: {
-        systemInstruction,
-        tools: [{ functionDeclarations: tools }],
-        temperature: 0.1, // Baja temperatura para mayor fidelidad a la instrucción
+    const response = await model.generateContent({
+      contents: [{ role: "user", parts }],
+      generationConfig: {
+        temperature: 0.1,
       },
     });
 
-    return response;
+    const result = response.response;
+    const functionCalls = result.candidates?.[0]?.content?.parts
+      ?.filter(part => part.functionCall)
+      .map(part => part.functionCall);
+
+    return {
+      text: result.text(),
+      functionCalls: functionCalls && functionCalls.length > 0 ? functionCalls : undefined
+    };
   } catch (error: any) {
     console.error("Critical AI Core Error:", error);
     throw error;
