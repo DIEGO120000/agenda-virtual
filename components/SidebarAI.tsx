@@ -78,7 +78,7 @@ const SidebarAI: React.FC<Props> = ({
         });
       }
     } catch (error: any) {
-      setMessages(prev => [...prev, { role: 'error', text: `SYS_ERROR: RECONEXIÓN FALLIDA (${error.message || 'XHR_FAILURE'})` }]);
+      setMessages(prev => [...prev, { role: 'error', text: `SYS_ERROR: ERROR_DETECTADO (${error.message || 'FALLO_GENERAL'}) - VERIFICA_VITE_V3` }]);
     } finally {
       setLoading(false);
     }
