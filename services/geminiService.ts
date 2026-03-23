@@ -112,7 +112,12 @@ export const getAIResponse = async (
   `;
 
   // Aseguramos que la instancia sea fresca para cada llamada
-  const genAI = new GoogleGenAI(import.meta.env.VITE_GEMINI_API_KEY || "");
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("ERROR_SISTEMA: VITE_GEMINI_API_KEY_NOT_FOUND. Por favor, revisa los Secretos de GitHub.");
+  }
+
+  const genAI = new GoogleGenAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
     systemInstruction: systemInstruction,
