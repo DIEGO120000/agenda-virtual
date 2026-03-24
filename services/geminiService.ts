@@ -1,18 +1,18 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { AppState } from "../types";
+import { AppState, PrioridadTarea } from "../types";
 
-// --- VERIFICACIÓN INSTANTÁNEA v5.2 ---
+// --- VERIFICACIÓN DE NÚCLEO v5.5 ---
 const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
 const apiKey = rawKey.trim().replace(/["']/g, "");
 
-console.log("%c🚀 AGV NÚCLEO v5.2 CARGADO", "color: #3b82f6; font-weight: bold; font-size: 12px;");
-console.log("ID_CLAVE_ACTIVA:", apiKey ? `${apiKey.substring(0, 7)}...${apiKey.slice(-4)}` : "❌ NO_DETECTADA");
-// -------------------------------------
+console.log("%c🚀 FORMATO-A NÚCLEO v5.5", "color: #10b981; font-weight: bold;");
+console.log("ID_CLAVE:", apiKey ? `${apiKey.substring(0, 7)}...${apiKey.slice(-4)}` : "❌");
+// -----------------------------------
 
 const tools = [
   {
     name: 'gestionar_agenda',
-    description: 'Modifica tareas.',
+    description: 'Modifica tareas académicas.',
     parameters: {
       type: 'object',
       properties: {
@@ -36,7 +36,7 @@ const tools = [
   },
   {
     name: 'gestionar_horario',
-    description: 'Modifica horario.',
+    description: 'Modifica el horario.',
     parameters: {
       type: 'object',
       properties: {
@@ -72,7 +72,7 @@ const tools = [
   },
   {
     name: 'gestionar_pasatiempos',
-    description: 'Guarda hobbies.',
+    description: 'Registra hobbies.',
     parameters: {
       type: 'object',
       properties: {
@@ -83,7 +83,7 @@ const tools = [
   },
   {
     name: 'eliminar_contenido',
-    description: 'Borra elementos.',
+    description: 'Borra contenido.',
     parameters: {
       type: 'object',
       properties: {
@@ -101,12 +101,12 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_NOT_INJECTED_V5.2");
+  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_MISSING_V5.5");
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    systemInstruction: `SISTEMA v5.2. ESTADO: ${JSON.stringify(state)}.`,
+    systemInstruction: `SISTEMA v5.5. Administrador de Agenda. Estado: ${JSON.stringify(state)}`,
   });
 
   try {
@@ -131,7 +131,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls?.length ? functionCalls : undefined
     };
   } catch (error: any) {
-    console.error("V5.2_ERROR:", error);
+    console.error("V5.5_FAIL:", error);
     throw error;
   }
 };
