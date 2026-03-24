@@ -1,18 +1,18 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AppState, PrioridadTarea } from "../types";
 
-// --- VERIFICACIÓN DE NÚCLEO v5.5 ---
+// --- VERIFICACIÓN DE NÚCLEO v5.6 ---
 const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
 const apiKey = rawKey.trim().replace(/["']/g, "");
 
-console.log("%c🚀 FORMATO-A NÚCLEO v5.5", "color: #10b981; font-weight: bold;");
-console.log("ID_CLAVE:", apiKey ? `${apiKey.substring(0, 7)}...${apiKey.slice(-4)}` : "❌");
+console.log("%c🚀 FORMATO-A NÚCLEO v5.6", "color: #10b981; font-weight: bold;");
+console.log("CLAVE_DETECTADA:", apiKey ? "SÍ" : "NO");
 // -----------------------------------
 
 const tools = [
   {
     name: 'gestionar_agenda',
-    description: 'Modifica tareas académicas.',
+    description: 'Modifica tareas.',
     parameters: {
       type: 'object',
       properties: {
@@ -101,19 +101,23 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_MISSING_V5.5");
+  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_NOT_INJECTED_V5.6");
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    systemInstruction: `SISTEMA v5.5. Administrador de Agenda. Estado: ${JSON.stringify(state)}`,
-  });
+  
+  // FORZAMOS LA VERSIÓN v1 (ESTABLE) PARA EVITAR EL 404 EN EL ENDPOINT BETA
+  const model = genAI.getGenerativeModel(
+    { model: "gemini-1.5-flash" },
+    { apiVersion: 'v1' } 
+  );
 
   try {
     const parts: any[] = [];
     if (audio) parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
     if (fileData) parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    parts.push({ text: userPrompt || "Sincronizar." });
+    
+    const context = `SISTEMA: Administrador de Agenda. FECHA: ${new Date().toLocaleDateString()}. ESTADO: ${JSON.stringify(state)}. ORDEN: ${userPrompt || "Sincronizar."}`;
+    parts.push({ text: context });
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
@@ -131,7 +135,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls?.length ? functionCalls : undefined
     };
   } catch (error: any) {
-    console.error("V5.5_FAIL:", error);
+    console.error("V5.6_FAIL:", error);
     throw error;
   }
 };
