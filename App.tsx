@@ -111,7 +111,7 @@ const App: React.FC = () => {
         <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="animate-in fade-in slide-in-from-left duration-700">
             <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3">
-              <Calendar className="text-blue-600" size={32} /> FORMATO A <span className="text-blue-600">CENTRAL v3.9</span>
+              <Calendar className="text-blue-600" size={32} /> FORMATO A <span className="text-blue-600">CENTRAL v4.0</span>
             </h1>
             <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1 ml-1 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> 

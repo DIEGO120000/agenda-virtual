@@ -1,10 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AppState, PrioridadTarea } from "../types";
 
-// Esquema de herramientas optimizado para v1beta
-const tools: any[] = [
+// Esquema de herramientas simplificado al máximo para evitar errores de validación
+const tools = [
   {
     name: 'gestionar_agenda',
+    description: 'Añade o modifica tareas académicas.',
     parameters: {
       type: 'object',
       properties: {
@@ -17,7 +18,7 @@ const tools: any[] = [
               recomendado: { type: 'string' },
               culminacion: { type: 'string' },
               criticidad: { type: 'number' },
-              prioridad: { type: 'string', enum: Object.values(PrioridadTarea) }
+              prioridad: { type: 'string', enum: ['Baja', 'Media', 'Alta', 'Urgente'] }
             },
             required: ['nombre', 'recomendado', 'culminacion', 'criticidad', 'prioridad']
           }
@@ -28,6 +29,7 @@ const tools: any[] = [
   },
   {
     name: 'gestionar_horario',
+    description: 'Añade eventos al horario.',
     parameters: {
       type: 'object',
       properties: {
@@ -52,6 +54,7 @@ const tools: any[] = [
   },
   {
     name: 'gestionar_notes',
+    description: 'Guarda notas personales.',
     parameters: {
       type: 'object',
       properties: {
@@ -62,6 +65,7 @@ const tools: any[] = [
   },
   {
     name: 'gestionar_pasatiempos',
+    description: 'Registra hobbies.',
     parameters: {
       type: 'object',
       properties: {
@@ -72,6 +76,7 @@ const tools: any[] = [
   },
   {
     name: 'eliminar_contenido',
+    description: 'Borra elementos por nombre.',
     parameters: {
       type: 'object',
       properties: {
@@ -90,69 +95,51 @@ export const getAIResponse = async (
   fileData?: { data: string, mimeType: string }
 ) => {
   const now = new Date();
-  const systemInstruction = `
-    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.9.
-    TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
-    FECHA DEL SISTEMA: ${now.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
-    ESTADO ACTUAL: ${JSON.stringify(state)}
+  const instructionText = `
+    IDENTIDAD: Administradora de Agenda v4.0.
+    FECHA: ${now.toLocaleDateString('es-ES')}.
+    ESTADO: ${JSON.stringify(state)}
+    ORDEN: Sé breve y eficiente.
   `;
 
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  const isProd = import.meta.env.PROD;
-  
-  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.9");
-  console.log("STATUS:", apiKey ? "✅ KEY_PRESENT" : "❌ KEY_MISSING");
-  console.log("ENV:", isProd ? "PRODUCTION" : "DEVELOPMENT");
-  console.groupEnd();
-  
-  if (!apiKey || apiKey.length < 10) {
-    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.9_${isProd ? "PROD" : "DEV"})`);
-  }
+  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_INVALID");
 
-  // Regresamos a la configuración estándar que usa v1beta por defecto
   const genAI = new GoogleGenerativeAI(apiKey);
+  
+  // SINCRONIZACIÓN EXACTA CON SDK v0.21.0
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    systemInstruction: {
-      role: "system",
-      parts: [{ text: systemInstruction }]
-    },
-    tools: [
-      {
-        functionDeclarations: tools,
-      },
-    ],
+    systemInstruction: instructionText, // String directo: Máxima compatibilidad
+    tools: [{ functionDeclarations: tools as any }],
   });
 
   try {
+    const contents = [];
     const parts: any[] = [];
-    if (audio) {
-      parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
-    }
-    if (fileData) {
-      parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    }
-    
-    parts.push({ text: userPrompt || "ESPERANDO ORDEN." });
+
+    if (audio) parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
+    if (fileData) parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
+    parts.push({ text: userPrompt || "PROCESAR." });
+
+    contents.push({ role: "user", parts });
 
     const result = await model.generateContent({
-      contents: [{ role: "user", parts }],
-      generationConfig: {
-        temperature: 0.1,
-      },
+      contents,
+      generationConfig: { temperature: 0.1 }
     });
 
     const response = result.response;
     const functionCalls = response.candidates?.[0]?.content?.parts
-      ?.filter(part => part.functionCall)
-      .map(part => part.functionCall);
+      ?.filter(p => p.functionCall)
+      .map(p => p.functionCall);
 
     return {
       text: response.text(),
-      functionCalls: functionCalls && functionCalls.length > 0 ? functionCalls : undefined
+      functionCalls: functionCalls?.length ? functionCalls : undefined
     };
   } catch (error: any) {
-    console.error("Critical AI Core Error:", error);
+    console.error("DEBUG_V4_ERROR:", error);
     throw error;
   }
 };
