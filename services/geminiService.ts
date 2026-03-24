@@ -1,23 +1,23 @@
-import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AppState, PrioridadTarea } from "../types";
 
-const tools: FunctionDeclaration[] = [
+const tools: any[] = [
   {
     name: 'gestionar_agenda',
     parameters: {
-      type: Type.OBJECT,
+      type: 'OBJECT',
       description: 'Añade o modifica tareas académicas/personales basándose en syllabus o comandos.',
       properties: {
         tareas: {
-          type: Type.ARRAY,
+          type: 'ARRAY',
           items: {
-            type: Type.OBJECT,
+            type: 'OBJECT',
             properties: {
-              nombre: { type: Type.STRING },
-              recomendado: { type: Type.STRING, description: 'Fecha sugerida de inicio (YYYY-MM-DD)' },
-              culminacion: { type: Type.STRING, description: 'Fecha de entrega final (YYYY-MM-DD)' },
-              criticidad: { type: Type.NUMBER, description: 'Nivel de importancia del 1 al 10' },
-              prioridad: { type: Type.STRING, enum: Object.values(PrioridadTarea) }
+              nombre: { type: 'STRING' },
+              recomendado: { type: 'STRING', description: 'Fecha sugerida de inicio (YYYY-MM-DD)' },
+              culminacion: { type: 'STRING', description: 'Fecha de entrega final (YYYY-MM-DD)' },
+              criticidad: { type: 'NUMBER', description: 'Nivel de importancia del 1 al 10' },
+              prioridad: { type: 'STRING', enum: Object.values(PrioridadTarea) }
             },
             required: ['nombre', 'recomendado', 'culminacion', 'criticidad', 'prioridad']
           }
@@ -29,20 +29,20 @@ const tools: FunctionDeclaration[] = [
   {
     name: 'gestionar_horario',
     parameters: {
-      type: Type.OBJECT,
+      type: 'OBJECT',
       description: 'Añade eventos al horario semanal.',
       properties: {
         eventos: {
-          type: Type.ARRAY,
+          type: 'ARRAY',
           items: {
-            type: Type.OBJECT,
+            type: 'OBJECT',
             properties: {
-              dia: { type: Type.STRING, description: 'Lunes, Martes, etc.' },
-              hora: { type: Type.STRING, description: 'HH:MM (24h)' },
-              horaFin: { type: Type.STRING, description: 'HH:MM (24h)' },
-              actividad: { type: Type.STRING },
-              tipo: { type: Type.STRING, enum: ['clase', 'estudio', 'descanso'] },
-              modalidad: { type: Type.STRING, enum: ['Virtual', 'Semipresencial', 'Presencial'] }
+              dia: { type: 'STRING', description: 'Lunes, Martes, etc.' },
+              hora: { type: 'STRING', description: 'HH:MM (24h)' },
+              horaFin: { type: 'STRING', description: 'HH:MM (24h)' },
+              actividad: { type: 'STRING' },
+              tipo: { type: 'STRING', enum: ['clase', 'estudio', 'descanso'] },
+              modalidad: { type: 'STRING', enum: ['Virtual', 'Semipresencial', 'Presencial'] }
             },
             required: ['dia', 'hora', 'horaFin', 'actividad', 'tipo']
           }
@@ -54,10 +54,10 @@ const tools: FunctionDeclaration[] = [
   {
     name: 'gestionar_notes',
     parameters: {
-      type: Type.OBJECT,
+      type: 'OBJECT',
       description: 'Guarda recordatorios rápidos, deudas, recados o notas personales.',
       properties: {
-        notes: { type: Type.ARRAY, items: { type: Type.STRING } }
+        notes: { type: 'ARRAY', items: { type: 'STRING' } }
       },
       required: ['notes']
     }
@@ -65,10 +65,10 @@ const tools: FunctionDeclaration[] = [
   {
     name: 'gestionar_pasatiempos',
     parameters: {
-      type: Type.OBJECT,
+      type: 'OBJECT',
       description: 'Registra actividades de ocio o hobbies.',
       properties: {
-        hobbies: { type: Type.ARRAY, items: { type: Type.STRING } }
+        hobbies: { type: 'ARRAY', items: { type: 'STRING' } }
       },
       required: ['hobbies']
     }
@@ -76,11 +76,11 @@ const tools: FunctionDeclaration[] = [
   {
     name: 'eliminar_contenido',
     parameters: {
-      type: Type.OBJECT,
+      type: 'OBJECT',
       description: 'Borra elementos de la base de datos por nombre o palabra clave.',
       properties: {
-        tipo: { type: Type.STRING, enum: ['tarea', 'horario', 'nota', 'pasatiempo'] },
-        criterios: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Lista de nombres o fragmentos a eliminar' }
+        tipo: { type: 'STRING', enum: ['tarea', 'horario', 'nota', 'pasatiempo'] },
+        criterios: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Lista de nombres o fragmentos a eliminar' }
       },
       required: ['tipo', 'criterios']
     }
@@ -95,7 +95,7 @@ export const getAIResponse = async (
 ) => {
   const now = new Date();
   const systemInstruction = `
-    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.4.
+    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.6.
     TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
     
     REGLA DE ORO DE AUDIO: Escucha fonéticamente con precisión. Diferencia entre:
@@ -111,26 +111,25 @@ export const getAIResponse = async (
     ESTADO ACTUAL: ${JSON.stringify(state)}
   `;
 
-  // LOG DE SEGURIDAD PARA DEPURACIÓN (Ver en Consola F12)
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const isProd = import.meta.env.PROD;
   
-  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.5");
+  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.6");
   console.log("STATUS:", apiKey ? "✅ KEY_PRESENT" : "❌ KEY_MISSING");
   console.log("LENGTH:", apiKey?.length || 0);
   console.log("ENV:", isProd ? "PRODUCTION" : "DEVELOPMENT");
   console.groupEnd();
   
   if (!apiKey || apiKey.length < 10) {
-    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.5_${isProd ? "PROD" : "DEV"})`);
+    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.6_${isProd ? "PROD" : "DEV"})`);
   }
 
-  // IMPORTANTE: El nuevo SDK @google/genai requiere un objeto de configuración
-  const genAI = new GoogleGenAI({ apiKey: apiKey });
+  // SDK ESTÁNDAR PARA WEB
+  const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
     systemInstruction: systemInstruction,
-    tools: [{ functionDeclarations: tools }],
+    tools: [{ functionDeclarations: tools as any }],
   });
 
   try {
@@ -156,20 +155,20 @@ export const getAIResponse = async (
     const triggerText = userPrompt || (audio ? "TRANSCRIPCIÓN Y ACCIÓN REQUERIDA." : "ESPERANDO.");
     parts.push({ text: triggerText });
 
-    const response = await model.generateContent({
+    const result = await model.generateContent({
       contents: [{ role: "user", parts }],
       generationConfig: {
         temperature: 0.1,
       },
     });
 
-    const result = response.response;
-    const functionCalls = result.candidates?.[0]?.content?.parts
+    const response = result.response;
+    const functionCalls = response.candidates?.[0]?.content?.parts
       ?.filter(part => part.functionCall)
       .map(part => part.functionCall);
 
     return {
-      text: result.text(),
+      text: response.text(),
       functionCalls: functionCalls && functionCalls.length > 0 ? functionCalls : undefined
     };
   } catch (error: any) {
