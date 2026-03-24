@@ -22,7 +22,7 @@ const SidebarAI: React.FC<Props> = ({
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<{ role: 'ai' | 'user' | 'error'; text: string }[]>([
-    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v4.9 // MULTIMODAL ACTIVO // LISTO.' }
+    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v5.1 // VERIFICACIÓN ACTIVA // LISTO.' }
   ]);
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -85,7 +85,7 @@ const SidebarAI: React.FC<Props> = ({
         });
       }
     } catch (error: any) {
-      setMessages(prev => [...prev, { role: 'error', text: `SYS_ERROR: (${error.message || 'FATAL_V4.9'}) // [AI_STUDIO_MULTIMODAL]` }]);
+      setMessages(prev => [...prev, { role: 'error', text: `SYS_ERROR: (${error.message || 'FATAL_V5.1'}) // [ABRE_CONSOLA_F12]` }]);
     } finally {
       setLoading(false);
     }
