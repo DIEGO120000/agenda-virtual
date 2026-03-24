@@ -1,20 +1,16 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AppState, PrioridadTarea } from "../types";
 
-// --- NÚCLEO v5.9 ---
-const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
-const apiKey = rawKey.trim().replace(/["']/g, "");
-
-console.log("%c🚀 FORMATO-A v5.9 ACTIVO", "color: #ef4444; font-weight: bold; font-size: 14px;");
-if (apiKey.includes("BnGSwtu")) {
-  console.warn("⚠️ ALERTA: Sigues usando la clave de Google Cloud. Cámbiala por una de AI Studio para evitar el error 404.");
-}
-// -------------------
+// --- NÚCLEO v6.0 (SECURITY & DEBUG) ---
+const getCleanKey = () => {
+  const raw = import.meta.env.VITE_GEMINI_API_KEY || "";
+  return raw.trim().replace(/["']/g, "");
+};
 
 const tools = [
   {
     name: 'gestionar_agenda',
-    description: 'Modifica tareas.',
+    description: 'Modifica tareas académicas.',
     parameters: {
       type: 'object',
       properties: {
@@ -103,12 +99,16 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  if (!apiKey) throw new Error("API_KEY_NOT_FOUND");
+  const apiKey = getCleanKey();
+
+  if (!apiKey || apiKey.length < 20) {
+    throw new Error("CLAVE_INVÁLIDA_O_EXPUESTA: Por favor genera una nueva clave en AI Studio.");
+  }
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    systemInstruction: `SISTEMA v5.9. Administrador de Agenda Académica.`,
+    systemInstruction: "ERES ASISTENTE v6.0. EFICIENTE Y DIRECTA.",
   });
 
   try {
@@ -133,7 +133,10 @@ export const getAIResponse = async (
       functionCalls: functionCalls?.length ? functionCalls : undefined
     };
   } catch (error: any) {
-    console.error("V5.9_FAIL:", error);
+    console.error("V6.0_FATAL:", error);
+    if (error.message?.includes("API_KEY_INVALID") || error.message?.includes("not found")) {
+      throw new Error("LA_CLAVE_HA_SIDO_DESACTIVADA: Google detectó que la clave se filtró. GENERA UNA NUEVA EN AI STUDIO.");
+    }
     throw error;
   }
 };
