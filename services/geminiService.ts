@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AppState, PrioridadTarea } from "../types";
 
-// Estandarización total de tipos para evitar errores de validación
+// Esquema de herramientas optimizado para v1beta
 const tools: any[] = [
   {
     name: 'gestionar_agenda',
@@ -91,32 +91,38 @@ export const getAIResponse = async (
 ) => {
   const now = new Date();
   const systemInstruction = `
-    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.8.
+    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.9.
     TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
     FECHA DEL SISTEMA: ${now.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
-    TONO: Seco, ultra-eficiente, técnico.
     ESTADO ACTUAL: ${JSON.stringify(state)}
   `;
 
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const isProd = import.meta.env.PROD;
   
-  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.8");
+  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.9");
   console.log("STATUS:", apiKey ? "✅ KEY_PRESENT" : "❌ KEY_MISSING");
-  console.log("LENGTH:", apiKey?.length || 0);
   console.log("ENV:", isProd ? "PRODUCTION" : "DEVELOPMENT");
   console.groupEnd();
   
   if (!apiKey || apiKey.length < 10) {
-    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.8_${isProd ? "PROD" : "DEV"})`);
+    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.9_${isProd ? "PROD" : "DEV"})`);
   }
 
-  // FORZAMOS API VERSION v1 PARA ESTABILIDAD
+  // Regresamos a la configuración estándar que usa v1beta por defecto
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel(
-    { model: "gemini-1.5-flash", systemInstruction },
-    { apiVersion: 'v1' } // <-- CAMBIO CLAVE: Forzar versión estable
-  );
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    systemInstruction: {
+      role: "system",
+      parts: [{ text: systemInstruction }]
+    },
+    tools: [
+      {
+        functionDeclarations: tools,
+      },
+    ],
+  });
 
   try {
     const parts: any[] = [];
@@ -127,11 +133,10 @@ export const getAIResponse = async (
       parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
     }
     
-    parts.push({ text: userPrompt || "ESPERANDO COMANDO." });
+    parts.push({ text: userPrompt || "ESPERANDO ORDEN." });
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
-      tools: [{ functionDeclarations: tools }], // <-- Movido aquí para mayor compatibilidad
       generationConfig: {
         temperature: 0.1,
       },
