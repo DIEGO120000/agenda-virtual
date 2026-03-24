@@ -1,99 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { AppState, PrioridadTarea } from "../types";
+import { AppState } from "../types";
 
-// --- VERIFICACIÓN DE NÚCLEO v5.6 ---
+// --- VERIFICACIÓN DE NÚCLEO v5.7 ---
 const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
 const apiKey = rawKey.trim().replace(/["']/g, "");
-
-console.log("%c🚀 FORMATO-A NÚCLEO v5.6", "color: #10b981; font-weight: bold;");
-console.log("CLAVE_DETECTADA:", apiKey ? "SÍ" : "NO");
-// -----------------------------------
-
-const tools = [
-  {
-    name: 'gestionar_agenda',
-    description: 'Modifica tareas.',
-    parameters: {
-      type: 'object',
-      properties: {
-        tareas: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              nombre: { type: 'string' },
-              recomendado: { type: 'string' },
-              culminacion: { type: 'string' },
-              criticidad: { type: 'number' },
-              prioridad: { type: 'string', enum: ['Baja', 'Media', 'Alta', 'Urgente'] }
-            },
-            required: ['nombre', 'recomendado', 'culminacion', 'criticidad', 'prioridad']
-          }
-        }
-      },
-      required: ['tareas']
-    }
-  },
-  {
-    name: 'gestionar_horario',
-    description: 'Modifica el horario.',
-    parameters: {
-      type: 'object',
-      properties: {
-        eventos: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              dia: { type: 'string' },
-              hora: { type: 'string' },
-              horaFin: { type: 'string' },
-              actividad: { type: 'string' },
-              tipo: { type: 'string', enum: ['clase', 'estudio', 'descanso'] },
-              modalidad: { type: 'string', enum: ['Virtual', 'Semipresencial', 'Presencial'] }
-            },
-            required: ['dia', 'hora', 'horaFin', 'actividad', 'tipo']
-          }
-        }
-      },
-      required: ['eventos']
-    }
-  },
-  {
-    name: 'gestionar_notes',
-    description: 'Guarda notas.',
-    parameters: {
-      type: 'object',
-      properties: {
-        notes: { type: 'array', items: { type: 'string' } }
-      },
-      required: ['notes']
-    }
-  },
-  {
-    name: 'gestionar_pasatiempos',
-    description: 'Registra hobbies.',
-    parameters: {
-      type: 'object',
-      properties: {
-        hobbies: { type: 'array', items: { type: 'string' } }
-      },
-      required: ['hobbies']
-    }
-  },
-  {
-    name: 'eliminar_contenido',
-    description: 'Borra contenido.',
-    parameters: {
-      type: 'object',
-      properties: {
-        tipo: { type: 'string', enum: ['tarea', 'horario', 'nota', 'pasatiempo'] },
-        criterios: { type: 'array', items: { type: 'string' } }
-      },
-      required: ['tipo', 'criterios']
-    }
-  }
-];
 
 export const getAIResponse = async (
   state: AppState, 
@@ -101,41 +11,32 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_NOT_INJECTED_V5.6");
+  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_NOT_FOUND_IN_GITHUB");
 
   const genAI = new GoogleGenerativeAI(apiKey);
   
-  // FORZAMOS LA VERSIÓN v1 (ESTABLE) PARA EVITAR EL 404 EN EL ENDPOINT BETA
-  const model = genAI.getGenerativeModel(
-    { model: "gemini-1.5-flash" },
-    { apiVersion: 'v1' } 
-  );
+  // Usamos el modelo estándar de AI Studio
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   try {
     const parts: any[] = [];
     if (audio) parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
     if (fileData) parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    
-    const context = `SISTEMA: Administrador de Agenda. FECHA: ${new Date().toLocaleDateString()}. ESTADO: ${JSON.stringify(state)}. ORDEN: ${userPrompt || "Sincronizar."}`;
-    parts.push({ text: context });
+    parts.push({ text: `ESTADO: ${JSON.stringify(state)}. ORDEN: ${userPrompt || "Sincronizar."}` });
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
-      tools: [{ functionDeclarations: tools as any }],
       generationConfig: { temperature: 0.1 }
     });
 
-    const response = result.response;
-    const functionCalls = response.candidates?.[0]?.content?.parts
-      ?.filter(p => p.functionCall)
-      .map(p => p.functionCall);
-
     return {
-      text: response.text(),
-      functionCalls: functionCalls?.length ? functionCalls : undefined
+      text: result.response.text(),
+      functionCalls: undefined
     };
   } catch (error: any) {
-    console.error("V5.6_FAIL:", error);
+    if (error.message?.includes("404")) {
+      throw new Error("ERROR_404: Tu clave es de 'Google Cloud' (PAGO). ÚSALA EN 'AI Studio' (GRATIS) para que funcione sin pagar.");
+    }
     throw error;
   }
 };
