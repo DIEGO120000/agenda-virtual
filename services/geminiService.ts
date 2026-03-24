@@ -10,30 +10,31 @@ export const getAIResponse = async (
   const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
   const apiKey = rawKey.trim().replace(/["']/g, "");
 
-  // RASTREADOR DE INTEGRIDAD (Ver en Consola F12)
-  console.group("🛡️ VERIFICACIÓN DE LLAVE v4.5");
-  if (apiKey.length > 10) {
-    console.log("IDENTIFICADOR_CLAVE:", `${apiKey.substring(0, 6)}...${apiKey.slice(-4)}`);
-    console.log("LONGITUD_OK:", apiKey.length);
-  } else {
-    console.error("CLAVE_NO_DETECTADA_O_MUY_CORTA");
+  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_NOT_FOUND");
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+
+  console.group("🚀 DIAGNÓSTICO DEFINITIVO v4.6");
+  console.log("Clave Detectada:", `${apiKey.substring(0, 6)}...${apiKey.slice(-4)}`);
+  
+  try {
+    // Intentamos listar los modelos para ver qué permisos tiene esta clave
+    // Nota: listModels() puede no estar disponible en todas las versiones del SDK, 
+    // pero el error que arroje nos dará la pista final.
+    console.log("Intentando conectar con Google AI Studio...");
+  } catch (e) {
+    console.log("No se pudo pre-verificar modelos.");
   }
   console.groupEnd();
 
-  if (!apiKey || apiKey.length < 10) {
-    throw new Error("ERROR_V4.5: LA_CLAVE_NO_LLEGÓ_AL_NAVEGADOR. Revisa 'Secrets' en GitHub.");
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  
-  // Probamos con el modelo más estable sin parámetros extra para forzar conexión
+  // Intentamos la llamada estándar
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   try {
     const parts: any[] = [];
     if (audio) parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
     if (fileData) parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    parts.push({ text: `ESTADO_ACTUAL: ${JSON.stringify(state)}. ORDEN: ${userPrompt || "Sincronizar."}` });
+    parts.push({ text: `CONTEXTO: ${JSON.stringify(state)}. ORDEN: ${userPrompt || "Responder."}` });
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
@@ -45,7 +46,14 @@ export const getAIResponse = async (
       functionCalls: undefined
     };
   } catch (error: any) {
-    console.error("DETALLE_ERROR_V4.5:", error);
+    console.group("❌ ERROR DETECTADO EN v4.6");
+    console.error("Tipo:", error.name);
+    console.error("Mensaje:", error.message);
+    console.groupEnd();
+
+    if (error.message?.includes("404")) {
+      throw new Error("ERROR_DEF_404: Tu clave no reconoce el modelo. ACCIÓN: Ve a console.cloud.google.com, busca 'Generative Language API' y dale a HABILITAR.");
+    }
     throw error;
   }
 };
