@@ -5,19 +5,19 @@ const tools: any[] = [
   {
     name: 'gestionar_agenda',
     parameters: {
-      type: 'OBJECT',
+      type: 'object',
       description: 'Añade o modifica tareas académicas/personales basándose en syllabus o comandos.',
       properties: {
         tareas: {
-          type: 'ARRAY',
+          type: 'array',
           items: {
-            type: 'OBJECT',
+            type: 'object',
             properties: {
-              nombre: { type: 'STRING' },
-              recomendado: { type: 'STRING', description: 'Fecha sugerida de inicio (YYYY-MM-DD)' },
-              culminacion: { type: 'STRING', description: 'Fecha de entrega final (YYYY-MM-DD)' },
-              criticidad: { type: 'NUMBER', description: 'Nivel de importancia del 1 al 10' },
-              prioridad: { type: 'STRING', enum: Object.values(PrioridadTarea) }
+              nombre: { type: 'string' },
+              recomendado: { type: 'string', description: 'Fecha sugerida de inicio (YYYY-MM-DD)' },
+              culminacion: { type: 'string', description: 'Fecha de entrega final (YYYY-MM-DD)' },
+              criticidad: { type: 'number', description: 'Nivel de importancia del 1 al 10' },
+              prioridad: { type: 'string', enum: Object.values(PrioridadTarea) }
             },
             required: ['nombre', 'recomendado', 'culminacion', 'criticidad', 'prioridad']
           }
@@ -29,20 +29,20 @@ const tools: any[] = [
   {
     name: 'gestionar_horario',
     parameters: {
-      type: 'OBJECT',
+      type: 'object',
       description: 'Añade eventos al horario semanal.',
       properties: {
         eventos: {
-          type: 'ARRAY',
+          type: 'array',
           items: {
-            type: 'OBJECT',
+            type: 'object',
             properties: {
-              dia: { type: 'STRING', description: 'Lunes, Martes, etc.' },
-              hora: { type: 'STRING', description: 'HH:MM (24h)' },
-              horaFin: { type: 'STRING', description: 'HH:MM (24h)' },
-              actividad: { type: 'STRING' },
-              tipo: { type: 'STRING', enum: ['clase', 'estudio', 'descanso'] },
-              modalidad: { type: 'STRING', enum: ['Virtual', 'Semipresencial', 'Presencial'] }
+              dia: { type: 'string', description: 'Lunes, Martes, etc.' },
+              hora: { type: 'string', description: 'HH:MM (24h)' },
+              horaFin: { type: 'string', description: 'HH:MM (24h)' },
+              actividad: { type: 'string' },
+              tipo: { type: 'string', enum: ['clase', 'estudio', 'descanso'] },
+              modalidad: { type: 'string', enum: ['Virtual', 'Semipresencial', 'Presencial'] }
             },
             required: ['dia', 'hora', 'horaFin', 'actividad', 'tipo']
           }
@@ -54,10 +54,10 @@ const tools: any[] = [
   {
     name: 'gestionar_notes',
     parameters: {
-      type: 'OBJECT',
+      type: 'object',
       description: 'Guarda recordatorios rápidos, deudas, recados o notas personales.',
       properties: {
-        notes: { type: 'ARRAY', items: { type: 'STRING' } }
+        notes: { type: 'array', items: { type: 'string' } }
       },
       required: ['notes']
     }
@@ -65,10 +65,10 @@ const tools: any[] = [
   {
     name: 'gestionar_pasatiempos',
     parameters: {
-      type: 'OBJECT',
+      type: 'object',
       description: 'Registra actividades de ocio o hobbies.',
       properties: {
-        hobbies: { type: 'ARRAY', items: { type: 'STRING' } }
+        hobbies: { type: 'array', items: { type: 'string' } }
       },
       required: ['hobbies']
     }
@@ -76,11 +76,11 @@ const tools: any[] = [
   {
     name: 'eliminar_contenido',
     parameters: {
-      type: 'OBJECT',
+      type: 'object',
       description: 'Borra elementos de la base de datos por nombre o palabra clave.',
       properties: {
-        tipo: { type: 'STRING', enum: ['tarea', 'horario', 'nota', 'pasatiempo'] },
-        criterios: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Lista de nombres o fragmentos a eliminar' }
+        tipo: { type: 'string', enum: ['tarea', 'horario', 'nota', 'pasatiempo'] },
+        criterios: { type: 'array', items: { type: 'string' }, description: 'Lista de nombres o fragmentos a eliminar' }
       },
       required: ['tipo', 'criterios']
     }
@@ -95,7 +95,7 @@ export const getAIResponse = async (
 ) => {
   const now = new Date();
   const systemInstruction = `
-    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.6.
+    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.7.
     TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
     
     REGLA DE ORO DE AUDIO: Escucha fonéticamente con precisión. Diferencia entre:
@@ -114,22 +114,22 @@ export const getAIResponse = async (
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const isProd = import.meta.env.PROD;
   
-  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.6");
+  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.7");
   console.log("STATUS:", apiKey ? "✅ KEY_PRESENT" : "❌ KEY_MISSING");
   console.log("LENGTH:", apiKey?.length || 0);
   console.log("ENV:", isProd ? "PRODUCTION" : "DEVELOPMENT");
   console.groupEnd();
   
   if (!apiKey || apiKey.length < 10) {
-    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.6_${isProd ? "PROD" : "DEV"})`);
+    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.7_${isProd ? "PROD" : "DEV"})`);
   }
 
-  // SDK ESTÁNDAR PARA WEB
+  // Usamos 'gemini-1.5-flash-latest' para forzar el endpoint más reciente
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-1.5-flash-latest",
     systemInstruction: systemInstruction,
-    tools: [{ functionDeclarations: tools as any }],
+    tools: [{ functionDeclarations: tools }],
   });
 
   try {
