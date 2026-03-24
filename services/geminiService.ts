@@ -1,12 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AppState, PrioridadTarea } from "../types";
 
+// Estandarización total de tipos para evitar errores de validación
 const tools: any[] = [
   {
     name: 'gestionar_agenda',
     parameters: {
       type: 'object',
-      description: 'Añade o modifica tareas académicas/personales basándose en syllabus o comandos.',
       properties: {
         tareas: {
           type: 'array',
@@ -14,9 +14,9 @@ const tools: any[] = [
             type: 'object',
             properties: {
               nombre: { type: 'string' },
-              recomendado: { type: 'string', description: 'Fecha sugerida de inicio (YYYY-MM-DD)' },
-              culminacion: { type: 'string', description: 'Fecha de entrega final (YYYY-MM-DD)' },
-              criticidad: { type: 'number', description: 'Nivel de importancia del 1 al 10' },
+              recomendado: { type: 'string' },
+              culminacion: { type: 'string' },
+              criticidad: { type: 'number' },
               prioridad: { type: 'string', enum: Object.values(PrioridadTarea) }
             },
             required: ['nombre', 'recomendado', 'culminacion', 'criticidad', 'prioridad']
@@ -30,16 +30,15 @@ const tools: any[] = [
     name: 'gestionar_horario',
     parameters: {
       type: 'object',
-      description: 'Añade eventos al horario semanal.',
       properties: {
         eventos: {
           type: 'array',
           items: {
             type: 'object',
             properties: {
-              dia: { type: 'string', description: 'Lunes, Martes, etc.' },
-              hora: { type: 'string', description: 'HH:MM (24h)' },
-              horaFin: { type: 'string', description: 'HH:MM (24h)' },
+              dia: { type: 'string' },
+              hora: { type: 'string' },
+              horaFin: { type: 'string' },
               actividad: { type: 'string' },
               tipo: { type: 'string', enum: ['clase', 'estudio', 'descanso'] },
               modalidad: { type: 'string', enum: ['Virtual', 'Semipresencial', 'Presencial'] }
@@ -55,7 +54,6 @@ const tools: any[] = [
     name: 'gestionar_notes',
     parameters: {
       type: 'object',
-      description: 'Guarda recordatorios rápidos, deudas, recados o notas personales.',
       properties: {
         notes: { type: 'array', items: { type: 'string' } }
       },
@@ -66,7 +64,6 @@ const tools: any[] = [
     name: 'gestionar_pasatiempos',
     parameters: {
       type: 'object',
-      description: 'Registra actividades de ocio o hobbies.',
       properties: {
         hobbies: { type: 'array', items: { type: 'string' } }
       },
@@ -77,10 +74,9 @@ const tools: any[] = [
     name: 'eliminar_contenido',
     parameters: {
       type: 'object',
-      description: 'Borra elementos de la base de datos por nombre o palabra clave.',
       properties: {
         tipo: { type: 'string', enum: ['tarea', 'horario', 'nota', 'pasatiempo'] },
-        criterios: { type: 'array', items: { type: 'string' }, description: 'Lista de nombres o fragmentos a eliminar' }
+        criterios: { type: 'array', items: { type: 'string' } }
       },
       required: ['tipo', 'criterios']
     }
@@ -95,68 +91,47 @@ export const getAIResponse = async (
 ) => {
   const now = new Date();
   const systemInstruction = `
-    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.7.
+    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.8.
     TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
-    
-    REGLA DE ORO DE AUDIO: Escucha fonéticamente con precisión. Diferencia entre:
-    - Nombres propios (Pablo, María) -> Notas personales.
-    - Términos financieros (pesos, debe, pagar) -> Notas personales.
-    - Términos académicos (examen, parcial, entrega) -> Agenda.
-
-    NO ALUCINES: Si el usuario dice "Pablo me debe 500 pesos", NO lo conviertas en un examen. Es una NOTA.
-    
     FECHA DEL SISTEMA: ${now.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
     TONO: Seco, ultra-eficiente, técnico.
-    
     ESTADO ACTUAL: ${JSON.stringify(state)}
   `;
 
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const isProd = import.meta.env.PROD;
   
-  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.7");
+  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.8");
   console.log("STATUS:", apiKey ? "✅ KEY_PRESENT" : "❌ KEY_MISSING");
   console.log("LENGTH:", apiKey?.length || 0);
   console.log("ENV:", isProd ? "PRODUCTION" : "DEVELOPMENT");
   console.groupEnd();
   
   if (!apiKey || apiKey.length < 10) {
-    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.7_${isProd ? "PROD" : "DEV"})`);
+    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.8_${isProd ? "PROD" : "DEV"})`);
   }
 
-  // Usamos 'gemini-1.5-flash-latest' para forzar el endpoint más reciente
+  // FORZAMOS API VERSION v1 PARA ESTABILIDAD
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash-latest",
-    systemInstruction: systemInstruction,
-    tools: [{ functionDeclarations: tools }],
-  });
+  const model = genAI.getGenerativeModel(
+    { model: "gemini-1.5-flash", systemInstruction },
+    { apiVersion: 'v1' } // <-- CAMBIO CLAVE: Forzar versión estable
+  );
 
   try {
     const parts: any[] = [];
     if (audio) {
-      parts.push({ 
-        inlineData: { 
-          mimeType: audio.mimeType, 
-          data: audio.data 
-        } 
-      });
+      parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
     }
-    
     if (fileData) {
-      parts.push({ 
-        inlineData: { 
-          mimeType: fileData.mimeType, 
-          data: fileData.data 
-        } 
-      });
+      parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
     }
     
-    const triggerText = userPrompt || (audio ? "TRANSCRIPCIÓN Y ACCIÓN REQUERIDA." : "ESPERANDO.");
-    parts.push({ text: triggerText });
+    parts.push({ text: userPrompt || "ESPERANDO COMANDO." });
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
+      tools: [{ functionDeclarations: tools }], // <-- Movido aquí para mayor compatibilidad
       generationConfig: {
         temperature: 0.1,
       },
