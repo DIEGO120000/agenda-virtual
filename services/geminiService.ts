@@ -4,7 +4,7 @@ import { AppState, PrioridadTarea } from "../types";
 const tools = [
   {
     name: 'gestionar_agenda',
-    description: 'Añade tareas académicas.',
+    description: 'Modifica tareas académicas.',
     parameters: {
       type: 'object',
       properties: {
@@ -28,7 +28,7 @@ const tools = [
   },
   {
     name: 'gestionar_horario',
-    description: 'Añade eventos al horario.',
+    description: 'Modifica el horario.',
     parameters: {
       type: 'object',
       properties: {
@@ -96,30 +96,30 @@ export const getAIResponse = async (
   const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
   const apiKey = rawKey.trim().replace(/["']/g, "");
 
-  if (!apiKey) throw new Error("API_KEY_EMPTY");
+  if (!apiKey || apiKey.length < 10) {
+    throw new Error("ERROR_V4.4: API_KEY_NOT_INJECTED_IN_GITHUB_SECRETS");
+  }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-  const instructionText = `IDENTIDAD: Admin v4.3. ESTADO: ${JSON.stringify(state)}. IMPORTANTE: Si vas a modificar la agenda, usa las funciones disponibles.`;
-
-  // Iniciamos un chat con historia para inyectar las instrucciones (Método más compatible)
-  const chat = model.startChat({
-    history: [
-      { role: "user", parts: [{ text: instructionText }] },
-      { role: "model", parts: [{ text: "PROTOCOLO RECONECTADO. LISTO PARA PROCESAR." }] },
-    ],
-    tools: [{ functionDeclarations: tools as any }],
-    generationConfig: { temperature: 0.1 }
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash",
+    systemInstruction: {
+       parts: [{ text: `PROTOCOLO v4.4. ESTADO: ${JSON.stringify(state)}` }]
+    }
   });
 
   try {
     const parts: any[] = [];
     if (audio) parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
     if (fileData) parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    parts.push({ text: userPrompt || "Sincronizar." });
+    parts.push({ text: userPrompt || "Ejecutar sincronización." });
 
-    const result = await chat.sendMessage(parts);
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts }],
+      tools: [{ functionDeclarations: tools as any }],
+      generationConfig: { temperature: 0.1 }
+    });
+
     const response = result.response;
     const functionCalls = response.candidates?.[0]?.content?.parts
       ?.filter(p => p.functionCall)
@@ -130,10 +130,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls?.length ? functionCalls : undefined
     };
   } catch (error: any) {
-    console.error("❌ ERROR_4.3:", error);
-    if (error.message?.includes("404")) {
-      throw new Error("404_NOT_FOUND: Tu API Key no tiene acceso a Gemini. Ve a AI Studio y activa 'Generative Language API'.");
-    }
+    console.error("V4.4_FAIL:", error);
     throw error;
   }
 };
