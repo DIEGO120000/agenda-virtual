@@ -1,10 +1,20 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AppState, PrioridadTarea } from "../types";
 
+// --- NÚCLEO v5.9 ---
+const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+const apiKey = rawKey.trim().replace(/["']/g, "");
+
+console.log("%c🚀 FORMATO-A v5.9 ACTIVO", "color: #ef4444; font-weight: bold; font-size: 14px;");
+if (apiKey.includes("BnGSwtu")) {
+  console.warn("⚠️ ALERTA: Sigues usando la clave de Google Cloud. Cámbiala por una de AI Studio para evitar el error 404.");
+}
+// -------------------
+
 const tools = [
   {
     name: 'gestionar_agenda',
-    description: 'Añade o modifica tareas.',
+    description: 'Modifica tareas.',
     parameters: {
       type: 'object',
       properties: {
@@ -28,7 +38,7 @@ const tools = [
   },
   {
     name: 'gestionar_horario',
-    description: 'Añade eventos al horario.',
+    description: 'Modifica el horario.',
     parameters: {
       type: 'object',
       properties: {
@@ -53,7 +63,7 @@ const tools = [
   },
   {
     name: 'gestionar_notes',
-    description: 'Guarda notas rápidas.',
+    description: 'Guarda notas.',
     parameters: {
       type: 'object',
       properties: {
@@ -75,7 +85,7 @@ const tools = [
   },
   {
     name: 'eliminar_contenido',
-    description: 'Borra elementos por nombre.',
+    description: 'Borra contenido.',
     parameters: {
       type: 'object',
       properties: {
@@ -93,22 +103,19 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
-  const apiKey = rawKey.trim().replace(/["']/g, "");
-
-  if (!apiKey) throw new Error("API_KEY_VACÍA_EN_GITHUB");
+  if (!apiKey) throw new Error("API_KEY_NOT_FOUND");
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    systemInstruction: `SISTEMA v5.8. Eres una asistente ultra-eficiente. Estado: ${JSON.stringify(state)}.`,
+    systemInstruction: `SISTEMA v5.9. Administrador de Agenda Académica.`,
   });
 
   try {
     const parts: any[] = [];
     if (audio) parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
     if (fileData) parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    parts.push({ text: userPrompt || "Sincronizar." });
+    parts.push({ text: `ESTADO: ${JSON.stringify(state)}. ORDEN: ${userPrompt || "Sincronizar."}` });
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
@@ -126,9 +133,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls?.length ? functionCalls : undefined
     };
   } catch (error: any) {
-    if (error.message?.includes("404")) {
-      throw new Error(`ERROR_404: La clave (${apiKey.substring(0, 6)}...) no tiene permisos. ¡USA UNA DE AI STUDIO!`);
-    }
+    console.error("V5.9_FAIL:", error);
     throw error;
   }
 };
