@@ -1,5 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { AppState, PrioridadTarea } from "../types";
+import { AppState } from "../types";
+
+// --- VERIFICACIÓN INSTANTÁNEA v5.2 ---
+const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+const apiKey = rawKey.trim().replace(/["']/g, "");
+
+console.log("%c🚀 AGV NÚCLEO v5.2 CARGADO", "color: #3b82f6; font-weight: bold; font-size: 12px;");
+console.log("ID_CLAVE_ACTIVA:", apiKey ? `${apiKey.substring(0, 7)}...${apiKey.slice(-4)}` : "❌ NO_DETECTADA");
+// -------------------------------------
 
 const tools = [
   {
@@ -17,7 +25,7 @@ const tools = [
               recomendado: { type: 'string' },
               culminacion: { type: 'string' },
               criticidad: { type: 'number' },
-              prioridad: { type: 'string', enum: Object.values(PrioridadTarea) }
+              prioridad: { type: 'string', enum: ['Baja', 'Media', 'Alta', 'Urgente'] }
             },
             required: ['nombre', 'recomendado', 'culminacion', 'criticidad', 'prioridad']
           }
@@ -93,34 +101,18 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
-  const apiKey = rawKey.trim().replace(/["']/g, "");
-
-  // --- VERIFICACIÓN VISUAL EN CONSOLA (v5.1) ---
-  console.log("%c🔑 VERIFICACIÓN DE CLAVE:", "color: yellow; font-weight: bold;");
-  console.log("Comienza con:", apiKey.substring(0, 7));
-  console.log("Termina con:", apiKey.slice(-4));
-  console.log("Longitud:", apiKey.length);
-  // ----------------------------------------------
-
-  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_NOT_INJECTED_V5.1");
+  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_NOT_INJECTED_V5.2");
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    systemInstruction: `SISTEMA v5.1. ESTADO: ${JSON.stringify(state)}.`,
+    systemInstruction: `SISTEMA v5.2. ESTADO: ${JSON.stringify(state)}.`,
   });
 
   try {
     const parts: any[] = [];
-    if (audio) {
-      parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
-      parts.push({ text: "Analiza el audio." });
-    }
-    if (fileData) {
-      parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    }
-    
+    if (audio) parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
+    if (fileData) parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
     parts.push({ text: userPrompt || "Sincronizar." });
 
     const result = await model.generateContent({
@@ -139,7 +131,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls?.length ? functionCalls : undefined
     };
   } catch (error: any) {
-    console.error("V5.1_ERROR:", error);
+    console.error("V5.2_ERROR:", error);
     throw error;
   }
 };
