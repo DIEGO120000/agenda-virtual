@@ -28,7 +28,7 @@ const tools = [
   },
   {
     name: 'gestionar_horario',
-    description: 'Modifica el horario semanal.',
+    description: 'Modifica el horario.',
     parameters: {
       type: 'object',
       properties: {
@@ -53,7 +53,7 @@ const tools = [
   },
   {
     name: 'gestionar_notes',
-    description: 'Guarda notas personales.',
+    description: 'Guarda notas.',
     parameters: {
       type: 'object',
       properties: {
@@ -75,7 +75,7 @@ const tools = [
   },
   {
     name: 'eliminar_contenido',
-    description: 'Borra elementos por nombre o tipo.',
+    description: 'Borra elementos.',
     parameters: {
       type: 'object',
       properties: {
@@ -93,26 +93,26 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
-  const apiKey = rawKey.trim().replace(/["']/g, "");
+  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY || "").trim().replace(/["']/g, "");
 
-  if (!apiKey) throw new Error("ERROR_V4.7: API_KEY_MISSING");
+  if (!apiKey) throw new Error("API_KEY_MISSING_V4.8");
 
+  // AI Studio utiliza el SDK estándar sin necesidad de habilitar APIs de Cloud manualmente
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    systemInstruction: `SISTEMA v4.7. ESTADO: ${JSON.stringify(state)}. Tarea: Administrar agenda académica.`,
-    tools: [{ functionDeclarations: tools as any }]
+    systemInstruction: `SISTEMA v4.8. MODO: AI_STUDIO_FREE. ESTADO: ${JSON.stringify(state)}`,
   });
 
   try {
     const parts: any[] = [];
     if (audio) parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
     if (fileData) parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    parts.push({ text: userPrompt || "Sincronizar ahora." });
+    parts.push({ text: userPrompt || "Sincronizar." });
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts }],
+      tools: [{ functionDeclarations: tools as any }],
       generationConfig: { temperature: 0.1 }
     });
 
@@ -126,10 +126,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls?.length ? functionCalls : undefined
     };
   } catch (error: any) {
-    console.error("DEBUG_V4.7:", error);
-    if (error.message?.includes("404")) {
-      throw new Error("404_API_DISABLE: Debes habilitar 'Generative Language API' en la consola de Google Cloud.");
-    }
+    console.error("V4.8_STUDIO_FAIL:", error);
     throw error;
   }
 };
