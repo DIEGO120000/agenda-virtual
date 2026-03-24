@@ -1,11 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AppState, PrioridadTarea } from "../types";
 
-// Esquema de herramientas simplificado al máximo para evitar errores de validación
 const tools = [
   {
     name: 'gestionar_agenda',
-    description: 'Añade o modifica tareas académicas.',
+    description: 'Modifica tareas académicas.',
     parameters: {
       type: 'object',
       properties: {
@@ -18,7 +17,7 @@ const tools = [
               recomendado: { type: 'string' },
               culminacion: { type: 'string' },
               criticidad: { type: 'number' },
-              prioridad: { type: 'string', enum: ['Baja', 'Media', 'Alta', 'Urgente'] }
+              prioridad: { type: 'string', enum: Object.values(PrioridadTarea) }
             },
             required: ['nombre', 'recomendado', 'culminacion', 'criticidad', 'prioridad']
           }
@@ -29,7 +28,7 @@ const tools = [
   },
   {
     name: 'gestionar_horario',
-    description: 'Añade eventos al horario.',
+    description: 'Modifica el horario semanal.',
     parameters: {
       type: 'object',
       properties: {
@@ -76,7 +75,7 @@ const tools = [
   },
   {
     name: 'eliminar_contenido',
-    description: 'Borra elementos por nombre.',
+    description: 'Borra elementos por nombre o tipo.',
     parameters: {
       type: 'object',
       properties: {
@@ -95,37 +94,34 @@ export const getAIResponse = async (
   fileData?: { data: string, mimeType: string }
 ) => {
   const now = new Date();
-  const instructionText = `
-    IDENTIDAD: Administradora de Agenda v4.0.
-    FECHA: ${now.toLocaleDateString('es-ES')}.
-    ESTADO: ${JSON.stringify(state)}
-    ORDEN: Sé breve y eficiente.
-  `;
-
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey || apiKey.length < 10) throw new Error("API_KEY_INVALID");
+  
+  // LIMPIEZA CRÍTICA: Eliminamos espacios accidentales de la clave
+  const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+  const apiKey = rawKey.trim().replace(/["']/g, ""); // Eliminamos comillas si las hay
+  
+  if (!apiKey || apiKey.length < 10) {
+    throw new Error("ERROR_V4.1: API_KEY_MISSING_OR_INVALID");
+  }
 
   const genAI = new GoogleGenerativeAI(apiKey);
   
-  // SINCRONIZACIÓN EXACTA CON SDK v0.21.0
+  // Usamos el formato de objeto para systemInstruction (Sintaxis Estándar)
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    systemInstruction: instructionText, // String directo: Máxima compatibilidad
+    systemInstruction: {
+      parts: [{ text: `IDENTIDAD: Admin Agenda v4.1. FECHA: ${now.toLocaleDateString()}. ESTADO: ${JSON.stringify(state)}` }]
+    },
     tools: [{ functionDeclarations: tools as any }],
   });
 
   try {
-    const contents = [];
     const parts: any[] = [];
-
     if (audio) parts.push({ inlineData: { mimeType: audio.mimeType, data: audio.data } });
     if (fileData) parts.push({ inlineData: { mimeType: fileData.mimeType, data: fileData.data } });
-    parts.push({ text: userPrompt || "PROCESAR." });
-
-    contents.push({ role: "user", parts });
+    parts.push({ text: userPrompt || "Sincronizar." });
 
     const result = await model.generateContent({
-      contents,
+      contents: [{ role: "user", parts }],
       generationConfig: { temperature: 0.1 }
     });
 
@@ -139,7 +135,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls?.length ? functionCalls : undefined
     };
   } catch (error: any) {
-    console.error("DEBUG_V4_ERROR:", error);
+    console.error("LOG_V4.1:", error);
     throw error;
   }
 };
