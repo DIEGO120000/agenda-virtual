@@ -1,0 +1,24 @@
+### 📋 RESUMEN DE CONTEXTO: PROYECTO AGUA VIRTUAL (AGV) ###
+
+--- ESTADO ACTUAL ---
+* Proyecto: React 19 + Vite + Gemini AI (GoogleGenAI).
+* Rama: main (Desplegado en GitHub Pages).
+* Versión de Diagnóstico: v3.3 (Confirmada en UI).
+
+--- EL PROBLEMA PRINCIPAL ---
+* Error en Producción: "SYS_ERROR: ERROR_DETECTADO (An API Key must be set when running in a browser) - VERIFICA_VITE_V3".
+* Diagnóstico: La variable de entorno 'VITE_GEMINI_API_KEY' llega vacía al navegador tras el build en GitHub Actions, a pesar de que el secreto está configurado y el flujo de despliegue termina en verde.
+
+--- LO QUE HEMOS INTENTADO ---
+1. CORRECCIÓN DE CÓDIGO: Se arregló la sintaxis en 'geminiService.ts', se reordenaron las instrucciones del sistema y se corrigió el manejo de 'functionCalls' para que la IA pueda modificar la agenda.
+2. CONFIGURACIÓN DE VITE: Se ajustó 'vite.config.ts' con 'base: /agenda-virtual/' para rutas correctas en GitHub Pages.
+3. INYECCIÓN DE SECRETOS: Se modificó '.github/workflows/deploy.yml' para forzar la creación de un archivo '.env' físico en el servidor de GitHub durante el comando 'npm run build'.
+4. DEPURACIÓN VISUAL: Se añadió "v3.3" al título en 'App.tsx' y se personalizaron los mensajes de error en 'SidebarAI.tsx' para confirmar que el navegador no use versiones viejas de la caché.
+
+--- PUNTOS A REVISAR MAÑANA ---
+1. Verificar si el secreto 'VITE_GEMINI_API_KEY' en GitHub tiene espacios, comillas o caracteres invisibles.
+2. Probar cambiando el método de inyección en el YAML a: 'VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }} npm run build'.
+3. Confirmar que no haya conflictos entre 'import.meta.env' y el proceso de compilación de Vite en el entorno de CI/CD.
+
+--- INSTRUCCIÓN PARA GEMINI CLI MAÑANA ---
+"Lee el archivo AGV_RESUMEN_MAÑANA.txt. Estamos en la versión v3.3 pero la API Key sigue llegando vacía al navegador en el despliegue de GitHub Pages. Ayúdame a solucionar la inyección del secreto VITE_GEMINI_API_KEY."

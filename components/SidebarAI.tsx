@@ -22,7 +22,7 @@ const SidebarAI: React.FC<Props> = ({
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<{ role: 'ai' | 'user' | 'error'; text: string }[]>([
-    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v3.2 // NÚCLEO RECONECTADO // LISTO.' }
+    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v3.4 // NÚCLEO RECONECTADO // LISTO.' }
   ]);
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);

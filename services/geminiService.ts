@@ -95,7 +95,7 @@ export const getAIResponse = async (
 ) => {
   const now = new Date();
   const systemInstruction = `
-    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.2.
+    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.4.
     TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
     
     REGLA DE ORO DE AUDIO: Escucha fonéticamente con precisión. Diferencia entre:
@@ -113,10 +113,13 @@ export const getAIResponse = async (
 
   // Aseguramos que la instancia sea fresca para cada llamada
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  console.log("DEBUG_API_KEY_STATUS:", apiKey ? "DETECTADA" : "NO_DETECTADA");
+  const isProd = import.meta.env.PROD;
   
-  if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("VITE_GEMINI_API_KEY_NOT_FOUND_IN_ENV");
+  console.log(`[V3.4_DEBUG] API_KEY_STATUS: ${apiKey ? "DETECTADA" : "NO_DETECTADA"} (LEN: ${apiKey?.length || 0})`);
+  console.log(`[V3.4_DEBUG] ENV_MODE: ${isProd ? "PRODUCTION" : "DEVELOPMENT"}`);
+  
+  if (!apiKey || apiKey === "undefined" || apiKey === "null" || apiKey === "") {
+    throw new Error(`MISSING_API_KEY (V3.4_${isProd ? "PROD" : "DEV"})`);
   }
 
   const genAI = new GoogleGenAI(apiKey);

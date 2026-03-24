@@ -23,14 +23,10 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Build
-        run: |
-          touch .env
-          echo "VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }}" >> .env
-          if [ -z "${{ secrets.VITE_GEMINI_API_KEY }}" ]; then
-            echo "Error: VITE_GEMINI_API_KEY is empty in GitHub Secrets!"
-            exit 1
-          fi
-          npm run build
+        run: npm run build
+        env:
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_DEBUG_MODE: true
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
