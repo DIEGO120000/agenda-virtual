@@ -56,9 +56,16 @@ const SidebarAI: React.FC<Props> = ({
 
     try {
       const response = await getAIResponse(state, trimmedInput, audioData, fileData);
-      const aiText = response.text || "COMANDO EJECUTADO // SINCRONIZACIÓN COMPLETA.";
+      const aiText = response.text || "Sincronización completa.";
       
       setMessages(prev => [...prev, { role: 'ai', text: aiText }]);
+      
+      // --- TEXT TO SPEECH GRATUITO (v5.0) ---
+      const utterance = new SpeechSynthesisUtterance(aiText);
+      utterance.lang = 'es-ES';
+      utterance.rate = 1.1;
+      window.speechSynthesis.speak(utterance);
+      // --------------------------------------
       
       if (response.functionCalls) {
         response.functionCalls.forEach(fc => {
