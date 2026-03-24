@@ -111,18 +111,22 @@ export const getAIResponse = async (
     ESTADO ACTUAL: ${JSON.stringify(state)}
   `;
 
-  // Aseguramos que la instancia sea fresca para cada llamada
+  // LOG DE SEGURIDAD PARA DEPURACIÓN (Ver en Consola F12)
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const isProd = import.meta.env.PROD;
   
-  console.log(`[V3.4_DEBUG] API_KEY_STATUS: ${apiKey ? "DETECTADA" : "NO_DETECTADA"} (LEN: ${apiKey?.length || 0})`);
-  console.log(`[V3.4_DEBUG] ENV_MODE: ${isProd ? "PRODUCTION" : "DEVELOPMENT"}`);
+  console.group("🚀 AGV_CORE_DIAGNOSTIC_v3.5");
+  console.log("STATUS:", apiKey ? "✅ KEY_PRESENT" : "❌ KEY_MISSING");
+  console.log("LENGTH:", apiKey?.length || 0);
+  console.log("ENV:", isProd ? "PRODUCTION" : "DEVELOPMENT");
+  console.groupEnd();
   
-  if (!apiKey || apiKey === "undefined" || apiKey === "null" || apiKey === "") {
-    throw new Error(`MISSING_API_KEY (V3.4_${isProd ? "PROD" : "DEV"})`);
+  if (!apiKey || apiKey.length < 10) {
+    throw new Error(`CRITICAL_AUTH_FAILURE: KEY_INVALID_OR_EMPTY (V3.5_${isProd ? "PROD" : "DEV"})`);
   }
 
-  const genAI = new GoogleGenAI(apiKey);
+  // IMPORTANTE: El nuevo SDK @google/genai requiere un objeto de configuración
+  const genAI = new GoogleGenAI({ apiKey: apiKey });
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
     systemInstruction: systemInstruction,

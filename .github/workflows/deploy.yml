@@ -23,10 +23,10 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Build
-        run: npm run build
-        env:
-          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
-          VITE_DEBUG_MODE: true
+        run: |
+          # Inyectamos la variable directamente antes del build para evitar que Vite la omita
+          export VITE_GEMINI_API_KEY="${{ secrets.VITE_GEMINI_API_KEY }}"
+          npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

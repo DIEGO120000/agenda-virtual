@@ -22,7 +22,7 @@ const SidebarAI: React.FC<Props> = ({
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<{ role: 'ai' | 'user' | 'error'; text: string }[]>([
-    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v3.4 // NÚCLEO RECONECTADO // LISTO.' }
+    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v3.5 // NÚCLEO ACTUALIZADO // LISTO.' }
   ]);
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -78,7 +78,7 @@ const SidebarAI: React.FC<Props> = ({
         });
       }
     } catch (error: any) {
-      setMessages(prev => [...prev, { role: 'error', text: `SYS_ERROR: ERROR_DETECTADO (${error.message || 'FALLO_GENERAL'}) - VERIFICA_VITE_V3` }]);
+      setMessages(prev => [...prev, { role: 'error', text: `SYS_ERROR: (${error.message || 'FATAL_V3.5'}) // [CHECK_ENV_SECRETS]` }]);
     } finally {
       setLoading(false);
     }
