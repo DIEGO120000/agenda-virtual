@@ -1,9 +1,7 @@
 import { AppState, PrioridadTarea } from "../types";
 
-// Configuración de Ingeniería de Sistemas - OpenRouter Gateway
+// Inyección Táctica de Seguridad - OpenRouter Gateway
 const API_KEY = "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";
-const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "google/gemini-2.0-flash-exp:free";
 
 const tools = [
   {
@@ -148,7 +146,7 @@ export const getAIResponse = async (
   messages.push({ role: "user", content: userContent });
 
   try {
-    const response = await fetch(ENDPOINT, {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${API_KEY}`,
@@ -157,17 +155,17 @@ export const getAIResponse = async (
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: MODEL,
-        messages: messages,
-        tools: tools,
-        tool_choice: "auto",
-        temperature: 0.1,
+        "model": "google/gemini-2.0-flash-exp:free",
+        "messages": messages,
+        "tools": tools,
+        "tool_choice": "auto",
+        "temperature": 0.1
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error?.message || `Error HTTP: ${response.status}`);
+      throw new Error(errorData.error?.message || `HTTP_STATUS_${response.status}`);
     }
 
     const data = await response.json();
@@ -183,7 +181,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls
     };
   } catch (error: any) {
-    console.error("Systems Core AI Error:", error);
+    console.error("Critical AI Core Error:", error);
     throw error;
   }
 };
