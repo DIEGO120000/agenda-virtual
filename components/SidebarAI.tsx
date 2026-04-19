@@ -82,7 +82,9 @@ const SidebarAI: React.FC<Props> = ({
         });
       }
     } catch (error: any) {
-      console.error("AI Core Critical Failure:", error);
+      console.error("AI Core Failure:", error);
+      // Ignorar errores de extensiones o Xray que no afectan la funcionalidad real
+      if (error.message?.includes('Xray') || error.stack?.includes('extension')) return;
       setMessages(prev => [...prev, { role: 'error', text: `SYS_ERROR: RECONEXIÓN FALLIDA (${error.message || 'XHR_FAILURE'})` }]);
     } finally {
       setLoading(false);

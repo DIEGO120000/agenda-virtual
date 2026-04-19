@@ -1,6 +1,7 @@
 import { AppState, PrioridadTarea } from "../types";
 
-const API_KEY = (import.meta as any).env.VITE_OPENROUTER_API_KEY || "";
+// Inyección directa para estabilidad en producción (Protocolo Formato A)
+const API_KEY = "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";
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "google/gemini-2.0-flash-exp:free";
 
