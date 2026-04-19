@@ -1,6 +1,6 @@
 import { AppState, PrioridadTarea } from "../types";
 
-// Inyección directa para estabilidad en producción (Protocolo Formato A)
+// Configuración de Ingeniería de Sistemas - OpenRouter Gateway
 const API_KEY = "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";
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "google/gemini-2.0-flash-exp:free";
@@ -112,10 +112,6 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  if (!API_KEY) {
-    throw new Error("API Key de OpenRouter no configurada en VITE_OPENROUTER_API_KEY");
-  }
-
   const systemInstruction = `
     ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.2.
     TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
@@ -146,10 +142,7 @@ export const getAIResponse = async (
   }
 
   if (audio) {
-    // Nota: El soporte de audio vía OpenAI/OpenRouter varía. 
-    // Para Gemini 2.0 en OpenRouter, intentamos enviarlo como un archivo si es posible, 
-    // o simplemente avisamos que hay audio.
-    userContent.push({ type: "text", text: "[EL USUARIO HA ENVIADO UN AUDIO QUE DEBE SER PROCESADO]" });
+    userContent.push({ type: "text", text: "[AUDIO_INPUT_DETECTED_FOR_PROCESSING]" });
   }
 
   messages.push({ role: "user", content: userContent });
@@ -159,9 +152,9 @@ export const getAIResponse = async (
       method: "POST",
       headers: {
         "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://agenda-virtual.itla.edu.do", // Opcional para OpenRouter
-        "X-Title": "Agenda Virtual Inteligente" // Opcional para OpenRouter
+        "HTTP-Referer": "https://diego120000.github.io/agenda-virtual/",
+        "X-Title": "Agenda Virtual Inteligente",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         model: MODEL,
@@ -174,7 +167,7 @@ export const getAIResponse = async (
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error?.message || `Error en la petición: ${response.status}`);
+      throw new Error(errorData.error?.message || `Error HTTP: ${response.status}`);
     }
 
     const data = await response.json();
@@ -190,7 +183,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls
     };
   } catch (error: any) {
-    console.error("Critical AI Core Error:", error);
+    console.error("Systems Core AI Error:", error);
     throw error;
   }
 };
