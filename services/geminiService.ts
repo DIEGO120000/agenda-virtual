@@ -1,6 +1,6 @@
 import { AppState, PrioridadTarea } from "../types";
 
-// Inyección Táctica de Seguridad - OpenRouter Gateway
+// Identidad Táctica - OpenRouter Gateway
 const API_KEY = "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";
 
 const tools = [
@@ -110,40 +110,10 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  const systemInstruction = `
-    ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.2.
-    TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
-    FECHA DEL SISTEMA: ${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
-    TONO: Seco, ultra-eficiente, técnico.
-    ESTADO ACTUAL DE LA AGENDA: ${JSON.stringify(state)}
-  `;
-
-  const messages: any[] = [
-    { role: "system", content: systemInstruction },
+  const currentMessages = [
+    { role: "system", content: "Eres la Agenda Virtual Inteligente de Diego. ESTADO_ACTUAL: " + JSON.stringify(state) },
+    { role: "user", content: userPrompt || "Sincronizar." }
   ];
-
-  const userContent: any[] = [];
-  
-  if (userPrompt) {
-    userContent.push({ type: "text", text: userPrompt });
-  } else if (!audio && !fileData) {
-    userContent.push({ type: "text", text: "TRANSCRIPCIÓN Y ACCIÓN REQUERIDA." });
-  }
-
-  if (fileData) {
-    userContent.push({
-      type: "image_url",
-      image_url: {
-        url: `data:${fileData.mimeType};base64,${fileData.data}`
-      }
-    });
-  }
-
-  if (audio) {
-    userContent.push({ type: "text", text: "[AUDIO_INPUT_DETECTED_FOR_PROCESSING]" });
-  }
-
-  messages.push({ role: "user", content: userContent });
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -156,7 +126,7 @@ export const getAIResponse = async (
       },
       body: JSON.stringify({
         "model": "google/gemini-2.0-flash-exp:free",
-        "messages": messages,
+        "messages": currentMessages,
         "tools": tools,
         "tool_choice": "auto",
         "temperature": 0.1
@@ -165,7 +135,7 @@ export const getAIResponse = async (
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error?.message || `HTTP_STATUS_${response.status}`);
+      throw new Error(errorData.error?.message || `HTTP_${response.status}`);
     }
 
     const data = await response.json();
@@ -181,7 +151,7 @@ export const getAIResponse = async (
       functionCalls: functionCalls
     };
   } catch (error: any) {
-    console.error("Critical AI Core Error:", error);
+    console.error("Systems Core AI Error:", error);
     throw error;
   }
 };

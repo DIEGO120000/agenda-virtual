@@ -58,7 +58,8 @@ const SidebarAI: React.FC<Props> = ({
       const response = await getAIResponse(state, trimmedInput, audioData, fileData);
       const aiText = response.text || "COMANDO EJECUTADO // SINCRONIZACIÓN COMPLETA.";
       
-      setMessages(prev => [...prev, { role: 'ai', text: aiText }]);
+      // Limpiar errores previos al recibir respuesta exitosa
+      setMessages(prev => [...prev.filter(m => m.role !== 'error'), { role: 'ai', text: aiText }]);
       
       if (response.functionCalls) {
         response.functionCalls.forEach(fc => {
