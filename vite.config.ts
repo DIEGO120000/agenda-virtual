@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  // Asegúrate de que coincida con el nombre de tu repositorio
-  base: '/agenda-test01/', 
+  // Rutas relativas para compatibilidad total con despliegues en subcarpetas o GitHub Pages
+  base: './', 
   build: {
     outDir: 'dist',
     rollupOptions: {
