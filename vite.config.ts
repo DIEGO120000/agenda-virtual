@@ -12,7 +12,7 @@ export default defineConfig({
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
           // CAMBIO CLAVE: Se actualizó de '@google/genai' a '@google/generative-ai'
-          'vendor-utils': ['lucide-react', 'date-fns', '@google/generative-ai']
+          'vendor-utils': ['lucide-react', 'date-fns']
         }
       }
     }

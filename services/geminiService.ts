@@ -1,88 +1,106 @@
-import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 import { AppState, PrioridadTarea } from "../types";
 
-const tools: FunctionDeclaration[] = [
+const API_KEY = (import.meta as any).env.VITE_OPENROUTER_API_KEY || "";
+const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "google/gemini-2.0-flash-exp:free";
+
+const tools = [
   {
-    name: 'gestionar_agenda',
-    parameters: {
-      type: Type.OBJECT,
+    type: "function",
+    function: {
+      name: 'gestionar_agenda',
       description: 'Añade o modifica tareas académicas/personales basándose en syllabus o comandos.',
-      properties: {
-        tareas: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              nombre: { type: Type.STRING },
-              recomendado: { type: Type.STRING, description: 'Fecha sugerida de inicio (YYYY-MM-DD)' },
-              culminacion: { type: Type.STRING, description: 'Fecha de entrega final (YYYY-MM-DD)' },
-              criticidad: { type: Type.NUMBER, description: 'Nivel de importancia del 1 al 10' },
-              prioridad: { type: Type.STRING, enum: Object.values(PrioridadTarea) }
-            },
-            required: ['nombre', 'recomendado', 'culminacion', 'criticidad', 'prioridad']
+      parameters: {
+        type: "object",
+        properties: {
+          tareas: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                nombre: { type: "string" },
+                recomendado: { type: "string", description: 'Fecha sugerida de inicio (YYYY-MM-DD)' },
+                culminacion: { type: "string", description: 'Fecha de entrega final (YYYY-MM-DD)' },
+                criticidad: { type: "number", description: 'Nivel de importancia del 1 al 10' },
+                prioridad: { type: "string", enum: Object.values(PrioridadTarea) }
+              },
+              required: ['nombre', 'recomendado', 'culminacion', 'criticidad', 'prioridad']
+            }
           }
-        }
-      },
-      required: ['tareas']
+        },
+        required: ['tareas']
+      }
     }
   },
   {
-    name: 'gestionar_horario',
-    parameters: {
-      type: Type.OBJECT,
+    type: "function",
+    function: {
+      name: 'gestionar_horario',
       description: 'Añade eventos al horario semanal.',
-      properties: {
-        eventos: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              dia: { type: Type.STRING, description: 'Lunes, Martes, etc.' },
-              hora: { type: Type.STRING, description: 'HH:MM (24h)' },
-              horaFin: { type: Type.STRING, description: 'HH:MM (24h)' },
-              actividad: { type: Type.STRING },
-              tipo: { type: Type.STRING, enum: ['clase', 'estudio', 'descanso'] },
-              modalidad: { type: Type.STRING, enum: ['Virtual', 'Semipresencial', 'Presencial'] }
-            },
-            required: ['dia', 'hora', 'horaFin', 'actividad', 'tipo']
+      parameters: {
+        type: "object",
+        properties: {
+          eventos: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                dia: { type: "string", description: 'Lunes, Martes, etc.' },
+                hora: { type: "string", description: 'HH:MM (24h)' },
+                horaFin: { type: "string", description: 'HH:MM (24h)' },
+                actividad: { type: "string" },
+                tipo: { type: "string", enum: ['clase', 'estudio', 'descanso'] },
+                modalidad: { type: "string", enum: ['Virtual', 'Semipresencial', 'Presencial'] }
+              },
+              required: ['dia', 'hora', 'horaFin', 'actividad', 'tipo']
+            }
           }
-        }
-      },
-      required: ['eventos']
+        },
+        required: ['eventos']
+      }
     }
   },
   {
-    name: 'gestionar_notes',
-    parameters: {
-      type: Type.OBJECT,
+    type: "function",
+    function: {
+      name: 'gestionar_notes',
       description: 'Guarda recordatorios rápidos, deudas, recados o notas personales.',
-      properties: {
-        notes: { type: Type.ARRAY, items: { type: Type.STRING } }
-      },
-      required: ['notes']
+      parameters: {
+        type: "object",
+        properties: {
+          notes: { type: "array", items: { type: "string" } }
+        },
+        required: ['notes']
+      }
     }
   },
   {
-    name: 'gestionar_pasatiempos',
-    parameters: {
-      type: Type.OBJECT,
+    type: "function",
+    function: {
+      name: 'gestionar_pasatiempos',
       description: 'Registra actividades de ocio o hobbies.',
-      properties: {
-        hobbies: { type: Type.ARRAY, items: { type: Type.STRING } }
-      },
-      required: ['hobbies']
+      parameters: {
+        type: "object",
+        properties: {
+          hobbies: { type: "array", items: { type: "string" } }
+        },
+        required: ['hobbies']
+      }
     }
   },
   {
-    name: 'eliminar_contenido',
-    parameters: {
-      type: Type.OBJECT,
+    type: "function",
+    function: {
+      name: 'eliminar_contenido',
       description: 'Borra elementos de la base de datos por nombre o palabra clave.',
-      properties: {
-        tipo: { type: Type.STRING, enum: ['tarea', 'horario', 'nota', 'pasatiempo'] },
-        criterios: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Lista de nombres o fragmentos a eliminar' }
-      },
-      required: ['tipo', 'criterios']
+      parameters: {
+        type: "object",
+        properties: {
+          tipo: { type: "string", enum: ['tarea', 'horario', 'nota', 'pasatiempo'] },
+          criterios: { type: "array", items: { type: "string" }, description: 'Lista de nombres o fragmentos a eliminar' }
+        },
+        required: ['tipo', 'criterios']
+      }
     }
   }
 ];
@@ -93,60 +111,83 @@ export const getAIResponse = async (
   audio?: { data: string, mimeType: string },
   fileData?: { data: string, mimeType: string }
 ) => {
-  // === MOD AÑADIDO ===
-  // La API key ahora se toma desde environment variable
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-  const now = new Date();
+  if (!API_KEY) {
+    throw new Error("API Key de OpenRouter no configurada en VITE_OPENROUTER_API_KEY");
+  }
 
   const systemInstruction = `
     ESTÁS OPERANDO BAJO EL "PROTOCOLO FORMATO A" v3.2.
     TU IDENTIDAD: Administradora de Vida y Agenda de Grado de Alto Rendimiento.
-
-    REGLA DE ORO DE AUDIO: Escucha fonéticamente con precisión. Diferencia entre:
-    - Nombres propios (Pablo, María) -> Notas personales.
-    - Términos financieros (pesos, debe, pagar) -> Notas personales.
-    - Términos académicos (examen, parcial, entrega) -> Agenda.
-
-    NO ALUCINES: Si el usuario dice "Pablo me debe 500 pesos", NO lo conviertas en un examen. Es una NOTA.
-
-    FECHA DEL SISTEMA: ${now.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+    FECHA DEL SISTEMA: ${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
     TONO: Seco, ultra-eficiente, técnico.
+    ESTADO ACTUAL DE LA AGENDA: ${JSON.stringify(state)}
   `;
 
+  const messages: any[] = [
+    { role: "system", content: systemInstruction },
+  ];
+
+  const userContent: any[] = [];
+  
+  if (userPrompt) {
+    userContent.push({ type: "text", text: userPrompt });
+  } else if (!audio && !fileData) {
+    userContent.push({ type: "text", text: "TRANSCRIPCIÓN Y ACCIÓN REQUERIDA." });
+  }
+
+  if (fileData) {
+    userContent.push({
+      type: "image_url",
+      image_url: {
+        url: `data:${fileData.mimeType};base64,${fileData.data}`
+      }
+    });
+  }
+
+  if (audio) {
+    // Nota: El soporte de audio vía OpenAI/OpenRouter varía. 
+    // Para Gemini 2.0 en OpenRouter, intentamos enviarlo como un archivo si es posible, 
+    // o simplemente avisamos que hay audio.
+    userContent.push({ type: "text", text: "[EL USUARIO HA ENVIADO UN AUDIO QUE DEBE SER PROCESADO]" });
+  }
+
+  messages.push({ role: "user", content: userContent });
+
   try {
-    const parts: any[] = [];
-    if (audio) {
-      parts.push({
-        inlineData: {
-          mimeType: audio.mimeType,
-          data: audio.data
-        }
-      });
-    }
-
-    if (fileData) {
-      parts.push({
-        inlineData: {
-          mimeType: fileData.mimeType,
-          data: fileData.data
-        }
-      });
-    }
-
-    const triggerText = userPrompt || (audio ? "TRANSCRIPCIÓN Y ACCIÓN REQUERIDA." : "ESPERANDO.");
-    parts.push({ text: triggerText });
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: [{ parts }],
-      config: {
-        systemInstruction,
-        tools: [{ functionDeclarations: tools }],
-        temperature: 0.1,
+    const response = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://agenda-virtual.itla.edu.do", // Opcional para OpenRouter
+        "X-Title": "Agenda Virtual Inteligente" // Opcional para OpenRouter
       },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: messages,
+        tools: tools,
+        tool_choice: "auto",
+        temperature: 0.1,
+      })
     });
 
-    return response;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || `Error en la petición: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const message = data.choices[0].message;
+
+    const functionCalls = message.tool_calls?.map((tc: any) => ({
+      name: tc.function.name,
+      args: JSON.parse(tc.function.arguments)
+    }));
+
+    return {
+      text: message.content,
+      functionCalls: functionCalls
+    };
   } catch (error: any) {
     console.error("Critical AI Core Error:", error);
     throw error;

@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Tarea, Nota, Pasatiempo, AppState, EstadoTarea, EventoHorario, PrioridadTarea } from './types';
+import { EstadoTarea, AppState } from './types';
 import AgendaTable from './components/AgendaTable';
 import SidebarAI from './components/SidebarAI';
 import TaskForm from './components/TaskForm';
@@ -8,19 +7,28 @@ import Sections from './components/Sections';
 import ScheduleSection from './components/ScheduleSection';
 import { PlusCircle, Calendar, ClipboardList, Moon, Sun } from 'lucide-react';
 
+// Helper para generar IDs compatible con todos los navegadores
+const generateId = () => {
+  return typeof crypto !== 'undefined' && crypto.randomUUID 
+    ? crypto.randomUUID() 
+    : Math.random().toString(36).substring(2, 11);
+};
+
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
     try {
       const saved = localStorage.getItem('agenda_app_state_v3');
       if (!saved) return { tareas: [], notas: [], pasatiempos: [], horario: [] };
       const parsed = JSON.parse(saved);
+      // Validamos que la estructura sea correcta para evitar pantallas en blanco por datos corruptos
       return {
         tareas: Array.isArray(parsed.tareas) ? parsed.tareas : [],
         notas: Array.isArray(parsed.notas) ? parsed.notas : [],
         pasatiempos: Array.isArray(parsed.pasatiempos) ? parsed.pasatiempos : [],
         horario: Array.isArray(parsed.horario) ? parsed.horario : [],
       };
-    } catch {
+    } catch (e) {
+      console.error("Error cargando estado:", e);
       return { tareas: [], notas: [], pasatiempos: [], horario: [] };
     }
   });
@@ -43,11 +51,11 @@ const App: React.FC = () => {
     localStorage.setItem('agenda_dark_mode', darkMode.toString());
   }, [darkMode]);
 
-  // Handlers para la IA
+  // Handlers para la IA mejorados con generateId
   const bulkAddTasks = (nuevas: any[]) => {
     const mapped = nuevas.map(t => ({
       ...t,
-      id: crypto.randomUUID(),
+      id: generateId(),
       ingreso: new Date().toISOString(),
       estado: EstadoTarea.PENDIENTE,
     }));
@@ -62,7 +70,7 @@ const App: React.FC = () => {
   };
 
   const updateHorario = (eventos: any[]) => {
-    const conId = eventos.map(e => ({ ...e, id: crypto.randomUUID() }));
+    const conId = eventos.map(e => ({ ...e, id: generateId() }));
     setState(prev => ({ ...prev, horario: [...prev.horario, ...conId] }));
   };
 
@@ -75,7 +83,7 @@ const App: React.FC = () => {
 
   const bulkAddNotas = (textos: string[]) => {
     const mapped = textos.map(t => ({
-      id: crypto.randomUUID(),
+      id: generateId(),
       contenido: t,
       timestamp: new Date().toISOString()
     }));
@@ -91,7 +99,7 @@ const App: React.FC = () => {
 
   const bulkAddPasatiempos = (nombres: string[]) => {
     const mapped = nombres.map(n => ({
-      id: crypto.randomUUID(),
+      id: generateId(),
       nombre: n,
       completado: false
     }));
@@ -107,7 +115,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white transition-colors duration-300">
-      <main className="max-w-7xl mx-auto p-4 md:p-8 pb-48"> {/* Padding inferior aumentado para el Dock */}
+      <main className="max-w-7xl mx-auto p-4 md:p-8 pb-48">
         <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="animate-in fade-in slide-in-from-left duration-700">
             <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3">
@@ -119,7 +127,7 @@ const App: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors" title="Toggle Dark Mode">
               {darkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-600" />}
             </button>
             <button onClick={() => setIsTaskFormOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-black text-xs tracking-widest flex items-center gap-2 shadow-lg transition-all active:scale-95 uppercase">
@@ -153,9 +161,9 @@ const App: React.FC = () => {
             <Sections 
               notas={state.notas} 
               pasatiempos={state.pasatiempos}
-              addNota={(c) => setState(p => ({ ...p, notas: [...p.notas, {id: crypto.randomUUID(), contenido: c, timestamp: new Date().toISOString()}] }))}
+              addNota={(c) => setState(p => ({ ...p, notas: [...p.notas, {id: generateId(), contenido: c, timestamp: new Date().toISOString()}] }))}
               removeNota={(id) => setState(p => ({ ...p, notas: p.notas.filter(n => n.id !== id) }))}
-              addPasatiempo={(n) => setState(p => ({ ...p, pasatiempos: [...p.pasatiempos, {id: crypto.randomUUID(), nombre: n, completado: false}] }))}
+              addPasatiempo={(n) => setState(p => ({ ...p, pasatiempos: [...p.pasatiempos, {id: generateId(), nombre: n, completado: false}] }))}
               togglePasatiempo={(id) => setState(p => ({ ...p, pasatiempos: p.pasatiempos.map(p => p.id === id ? {...p, completado: !p.completado} : p) }))}
               removePasatiempo={(id) => setState(p => ({ ...p, pasatiempos: p.pasatiempos.filter(p => p.id !== id) }))}
             />
@@ -180,7 +188,7 @@ const App: React.FC = () => {
           onClose={() => setIsTaskFormOpen(false)} 
           onSubmit={(t) => setState(p => ({ 
             ...p, 
-            tareas: [...p.tareas, {...t, id: crypto.randomUUID(), ingreso: new Date().toISOString(), estado: EstadoTarea.PENDIENTE}] 
+            tareas: [...p.tareas, {...t, id: generateId(), ingreso: new Date().toISOString(), estado: EstadoTarea.PENDIENTE}] 
           }))} 
         />
       )}
