@@ -18,7 +18,7 @@ const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
     try {
       const saved = localStorage.getItem('agenda_app_state_v3');
-      if (!saved) return { tareas: [], notas: [], pasatiempos: [], horario: [] };
+      if (!saved) return { tareas: [], notas: [], pasatiempos: [], horario: [], calificaciones: [] };
       const parsed = JSON.parse(saved);
       // Validamos que la estructura sea correcta para evitar pantallas en blanco por datos corruptos
       return {
@@ -26,10 +26,11 @@ const App: React.FC = () => {
         notas: Array.isArray(parsed.notas) ? parsed.notas : [],
         pasatiempos: Array.isArray(parsed.pasatiempos) ? parsed.pasatiempos : [],
         horario: Array.isArray(parsed.horario) ? parsed.horario : [],
+        calificaciones: Array.isArray(parsed.calificaciones) ? parsed.calificaciones : [],
       };
     } catch (e) {
       console.error("Error cargando estado:", e);
-      return { tareas: [], notas: [], pasatiempos: [], horario: [] };
+      return { tareas: [], notas: [], pasatiempos: [], horario: [], calificaciones: [] };
     }
   });
 
@@ -113,6 +114,23 @@ const App: React.FC = () => {
     }));
   };
 
+  const addCalificacion = (materia: string, obtenido: number, total: number) => {
+    setState(prev => {
+      const existIndex = prev.calificaciones.findIndex(c => c.materia.toLowerCase() === materia.toLowerCase());
+      const nuevasCalificaciones = [...prev.calificaciones];
+      if (existIndex > -1) {
+        nuevasCalificaciones[existIndex] = {
+          ...nuevasCalificaciones[existIndex],
+          acumulado: nuevasCalificaciones[existIndex].acumulado + obtenido,
+          totalPosible: nuevasCalificaciones[existIndex].totalPosible + total
+        };
+      } else {
+        nuevasCalificaciones.push({ materia, acumulado: obtenido, totalPosible: total });
+      }
+      return { ...prev, calificaciones: nuevasCalificaciones };
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white transition-colors duration-300">
       <main className="max-w-7xl mx-auto p-4 md:p-8 pb-48">
@@ -181,6 +199,7 @@ const App: React.FC = () => {
         onAIRemoveNotas={removeNotasByCriteria}
         onAIAddPasatiempos={bulkAddPasatiempos}
         onAIRemovePasatiempos={removePasatiemposByCriteria}
+        onAIAddCalificacion={addCalificacion}
       />
 
       {isTaskFormOpen && (

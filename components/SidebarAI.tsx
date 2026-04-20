@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppState } from '../types';
-import { getAIResponse } from '../services/geminiService';
+import { nlpParser } from '../services/nlpParser';
 import { Send, Mic, MicOff, Loader2, ChevronUp, ChevronDown, Paperclip, Terminal } from 'lucide-react';
 
 interface Props {
@@ -13,25 +13,24 @@ interface Props {
   onAIRemoveNotas: (fragmentos: string[]) => void;
   onAIAddPasatiempos: (textos: string[]) => void;
   onAIRemovePasatiempos: (nombres: string[]) => void;
+  onAIAddCalificacion: (materia: string, obtenido: number, total: number) => void;
 }
 
 const SidebarAI: React.FC<Props> = ({ 
   state, onAIAddTask, onAIRemoveTasks, onAIUpdateHorario, onAIRemoveHorario, 
-  onAIAddNotas, onAIRemoveNotas, onAIAddPasatiempos, onAIRemovePasatiempos 
+  onAIAddNotas, onAIRemoveNotas, onAIAddPasatiempos, onAIRemovePasatiempos,
+  onAIAddCalificacion
 }) => {
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<{ role: 'ai' | 'user' | 'error'; text: string }[]>([
-    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v3.2 // OPENROUTER_GEMINI_2.0 // NÚCLEO RECONECTADO // LISTO.' }
+    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v4.0 // NÚCLEO LOCAL ACTIVO // PROCESAMIENTO SIN LATENCIA.' }
   ]);
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -39,100 +38,97 @@ const SidebarAI: React.FC<Props> = ({
     }
   }, [messages, loading, isExpanded]);
 
-  const handleSend = async (
-    audioData?: { data: string, mimeType: string }, 
-    fileData?: { data: string, mimeType: string }
-  ) => {
-    const trimmedInput = input.trim();
-    if (!trimmedInput && !audioData && !fileData || loading) return;
-    
-    let userMsg = trimmedInput;
-    if (audioData) userMsg = "🎤 [COMANDO DE VOZ PROCESADO]";
-    if (fileData) userMsg = `📎 [DOC_${fileData.mimeType.split('/')[1].toUpperCase()}]`;
+  const handleSend = async (textToProcess?: string) => {
+    const trimmedInput = (textToProcess || input).trim();
+    if (!trimmedInput || loading) return;
     
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    if (!textToProcess) {
+      setMessages(prev => [...prev, { role: 'user', text: trimmedInput }]);
+    }
     setLoading(true);
 
     try {
-      const response = await getAIResponse(state, trimmedInput, audioData, fileData);
-      const aiText = response.text || "COMANDO EJECUTADO // SINCRONIZACIÓN COMPLETA.";
+      // Simular latencia mínima de procesamiento local
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Limpiar errores previos al recibir respuesta exitosa
-      setMessages(prev => [...prev.filter(m => m.role !== 'error'), { role: 'ai', text: aiText }]);
+      const response = nlpParser(trimmedInput);
+      let aiText = "COMANDO EJECUTADO // PROCESADO POR NÚCLEO LOCAL A-AI.";
       
-      if (response.functionCalls) {
-        response.functionCalls.forEach(fc => {
-          try {
-            const args = fc.args as any;
-            switch (fc.name) {
-              case 'gestionar_agenda': if (args.tareas) onAIAddTask(args.tareas); break;
-              case 'gestionar_horario': if (args.eventos) onAIUpdateHorario(args.eventos); break;
-              case 'gestionar_notes': if (args.notes) onAIAddNotas(args.notes); break;
-              case 'gestionar_pasatiempos': if (args.hobbies) onAIAddPasatiempos(args.hobbies); break;
-              case 'eliminar_contenido':
-                if (args.tipo === 'tarea') onAIRemoveTasks(args.criterios);
-                if (args.tipo === 'horario') onAIRemoveHorario(args.criterios);
-                if (args.tipo === 'nota') onAIRemoveNotas(args.criterios);
-                if (args.tipo === 'pasatiempo') onAIRemovePasatiempos(args.criterios);
-                break;
-            }
-          } catch (fnError) {
-            console.error("Function execute error:", fnError);
+      if (response) {
+        const { name, args } = response;
+        try {
+          switch (name) {
+            case 'gestionar_agenda': if (args.tareas) onAIAddTask(args.tareas); break;
+            case 'gestionar_horario': if (args.eventos) onAIUpdateHorario(args.eventos); break;
+            case 'gestionar_notes': if (args.notes) onAIAddNotas(args.notes); break;
+            case 'gestionar_calificacion': 
+              if (args.materia) {
+                onAIAddCalificacion(args.materia, args.obtenido, args.total);
+                aiText = `CALIFICACIÓN REGISTRADA: ${args.materia} (${args.obtenido}/${args.total}). ACUMULADO ACTUALIZADO.`;
+              }
+              break;
+            case 'eliminar_contenido':
+              if (args.tipo === 'tarea') onAIRemoveTasks(args.criterios);
+              if (args.tipo === 'horario') onAIRemoveHorario(args.criterios);
+              if (args.tipo === 'nota') onAIRemoveNotas(args.criterios);
+              if (args.tipo === 'pasatiempo') onAIRemovePasatiempos(args.criterios);
+              break;
           }
-        });
+        } catch (fnError) {
+          console.error("Local Parser Execution Error:", fnError);
+        }
+      } else {
+        aiText = "SISTEMA LOCAL: NO SE PUDO CATEGORIZAR EL COMANDO. GUARDADO COMO NOTA GENERAL.";
+        onAIAddNotas([trimmedInput]);
       }
+
+      setMessages(prev => [...prev, { role: 'ai', text: aiText }]);
     } catch (error: any) {
-      console.error("AI Core Failure:", error);
-      // Ignorar errores de extensiones o Xray que no afectan la funcionalidad real
-      if (error.message?.includes('Xray') || error.stack?.includes('extension')) return;
-      setMessages(prev => [...prev, { role: 'error', text: `SYS_ERROR: RECONEXIÓN FALLIDA (${error.message || 'XHR_FAILURE'})` }]);
+      setMessages(prev => [...prev, { role: 'error', text: `LOCAL_ERR: FALLA EN EL NÚCLEO (${error.message})` }]);
     } finally {
       setLoading(false);
     }
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      
-      const options = { mimeType: 'audio/webm;codecs=opus' };
-      const mimeType = MediaRecorder.isTypeSupported(options.mimeType) ? options.mimeType : 'audio/mp4';
-      
-      const recorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
-      
-      recorder.ondataavailable = (e) => { 
-        if (e.data.size > 0) chunksRef.current.push(e.data); 
-      };
-      
-      recorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
-        if (audioBlob.size > 1000) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64 = (reader.result as string).split(',')[1];
-            handleSend({ data: base64, mimeType });
-          };
-          reader.readAsDataURL(audioBlob);
-        } else {
-          setMessages(prev => [...prev, { role: 'error', text: "ERROR: SEÑAL DE VOZ INEXISTENTE." }]);
-        }
-        streamRef.current?.getTracks().forEach(t => t.stop());
-      };
-      
-      recorder.start();
-      setIsRecording(true);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'error', text: "ERROR: MICRÓFONO NO DETECTADO." }]);
+  const startRecording = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setMessages(prev => [...prev, { role: 'error', text: "ERROR: NAVEGADOR NO SOPORTA DICTADO POR VOZ." }]);
+      return;
     }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-DO';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setMessages(prev => [...prev, { role: 'user', text: `🎤 ${transcript}` }]);
+      handleSend(transcript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error(event.error);
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
       setIsRecording(false);
     }
   };
@@ -222,20 +218,6 @@ const SidebarAI: React.FC<Props> = ({
               <div className="p-4 md:p-6 bg-slate-950/80 border-t border-slate-800/50">
                 <div className="flex items-end gap-3 bg-slate-900 border border-slate-700/50 rounded-2xl p-2 focus-within:border-blue-500/50 transition-colors shadow-inner">
                   <div className="flex gap-1 shrink-0 pb-1">
-                    <input type="file" ref={fileInputRef} onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const r = new FileReader();
-                        r.onloadend = () => handleSend(undefined, { data: (r.result as string).split(',')[1], mimeType: file.type });
-                        r.readAsDataURL(file);
-                      }
-                      e.target.value = '';
-                    }} className="hidden" />
-                    
-                    <button onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-xl transition-all">
-                      <Paperclip size={20} />
-                    </button>
-                    
                     <button 
                       onClick={toggleMic}
                       className={`relative p-3 transition-all rounded-xl flex items-center justify-center ${isRecording ? 'text-white' : 'text-slate-500 hover:text-blue-400 hover:bg-slate-800'}`}
@@ -266,8 +248,8 @@ const SidebarAI: React.FC<Props> = ({
                   </button>
                 </div>
                 <div className="mt-3 flex justify-between items-center px-1">
-                  <span className="text-[7px] text-slate-600 mono font-black uppercase tracking-[0.2em]">SISTEMA BLINDADO // PROTOCOLO A-3.2</span>
-                  <span className="text-[7px] text-slate-600 mono font-black uppercase tracking-[0.2em]">{isRecording ? "GRABANDO... CLICK PARA FINALIZAR" : "CONEXIÓN ESTABLE"}</span>
+                  <span className="text-[7px] text-slate-600 mono font-black uppercase tracking-[0.2em]">NÚCLEO LOCAL A-AI // SINCRONIZACIÓN OFFLINE</span>
+                  <span className="text-[7px] text-slate-600 mono font-black uppercase tracking-[0.2em]">{isRecording ? "ESCUCHANDO... HABLE AHORA" : "PROCESAMIENTO INSTANTÁNEO"}</span>
                 </div>
               </div>
             </div>

@@ -45,9 +45,16 @@ export interface EventoHorario {
   modalidad?: 'Virtual' | 'Semipresencial' | 'Presencial';
 }
 
+export interface Calificacion {
+  materia: string;
+  acumulado: number;
+  totalPosible: number;
+}
+
 export interface AppState {
   tareas: Tarea[];
   notas: Nota[];
   pasatiempos: Pasatiempo[];
   horario: EventoHorario[];
+  calificaciones: Calificacion[];
 }
