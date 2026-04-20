@@ -105,7 +105,7 @@ const SidebarAI: React.FC<Props> = ({
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'es-DO';
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = false;
 
     recognition.onstart = () => {
