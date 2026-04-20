@@ -19,18 +19,20 @@ export const nlpParser = (input: string) => {
     return d.toISOString().split('T')[0];
   };
 
-  const stopWords = ['los', 'las', 'de', 'a', 'el', 'los sábados', 'los sabados', 'presencial', 'virtual', 'clase', 'materia'];
+  const EXCLUDE_WORDS = ["tengo", "clase", "materia", "de", "los", "las", "el", "virtual", "presencial", "para", "el", "mañana"];
   
   const sanitizeName = (name: string) => {
     let clean = name.toLowerCase();
-    // Eliminar indicadores de tiempo (ej: 2pm, 2 p.m., 14:00)
-    clean = clean.replace(/\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)/gi, '');
-    // Eliminar Stop Words
-    stopWords.forEach(word => {
+    // Eliminar indicadores de tiempo y rangos (ej: "de 2 a 6", "2pm", "14:00")
+    clean = clean.replace(/(?:de\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?(?:\s+a\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)?/gi, '');
+    // Eliminar palabras excluidas
+    EXCLUDE_WORDS.forEach(word => {
       const regex = new RegExp(`\\b${word}\\b`, 'gi');
       clean = clean.replace(regex, '');
     });
-    return clean.trim().replace(/\s+/g, ' ');
+    // Limpieza final de espacios y capitalización
+    const result = clean.trim().replace(/\s+/g, ' ');
+    return result.charAt(0).toUpperCase() + result.slice(1);
   };
 
   // CLASIFICACIÓN Y EXTRACCIÓN
@@ -39,9 +41,12 @@ export const nlpParser = (input: string) => {
   const agendaKeywords = ['examen', 'parcial', 'tarea', 'entrega', 'proyecto', 'estudiar', 'subir', 'foro', 'práctica', 'practica'];
   if (agendaKeywords.some(k => text.includes(k))) {
     const materiaMatch = text.match(/(?:de|en)\s+([a-z0-9\sáéíóúñ]+?)(?:\s+para|\s+el|\s+mañana|$)/i);
-    let materia = materiaMatch ? materiaMatch[1].trim() : "Materia Desconocida";
-    materia = sanitizeName(materia);
-    
+    let rawMateria = materiaMatch ? materiaMatch[1].trim() : text;
+    // Si la materia detectada es una de las keywords, buscar el contexto
+    if (agendaKeywords.includes(rawMateria.toLowerCase())) {
+        rawMateria = text.replace(new RegExp(agendaKeywords.join('|'), 'gi'), '');
+    }
+    const materia = sanitizeName(rawMateria);
     const fecha = resolveDate(text);
     const isHigh = text.includes('final') || text.includes('parcial') || text.includes('60%');
     
@@ -62,29 +67,32 @@ export const nlpParser = (input: string) => {
   // 2. GESTIONAR HORARIO
   const dias = ['lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'sábado', 'domingo'];
   if (dias.some(d => text.includes(d)) && (text.includes('a las') || text.match(/\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)/i))) {
-    const diaMatch = dias.find(d => text.includes(d)) || 'Lunes';
+    const rawDia = dias.find(d => text.includes(d)) || 'Lunes';
+    const diaMatch = (rawDia.toLowerCase().includes('sabado') || rawDia.toLowerCase().includes('sábado')) ? 'Sábado' : rawDia.charAt(0).toUpperCase() + rawDia.slice(1).replace('miércoles', 'Miercoles');
+    
     const horaMatch = text.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?/i);
     
     let hours = parseInt(horaMatch?.[1] || '8');
     const minutes = horaMatch?.[2] || '00';
-    const ampm = horaMatch?.[3]?.toLowerCase();
+    const ampm = horaMatch?.[3]?.toLowerCase().replace(/\./g, '');
 
-    if ((ampm === 'pm' || ampm === 'p.m.') && hours < 12) hours += 12;
-    if ((ampm === 'am' || ampm === 'a.m.') && hours === 12) hours = 0;
+    if (ampm === 'pm' && hours < 12) hours += 12;
+    if (ampm === 'am' && hours === 12) hours = 0;
 
     const horaFormatted = `${hours.toString().padStart(2, '0')}:${minutes}`;
     
-    // Sanitize activity name
-    let actividad = input.split(/lunes|martes|miercoles|miércoles|jueves|viernes|sabado|sábado|domingo/i)[0] || input;
-    actividad = sanitizeName(actividad);
+    // Sanitize activity name removing day and time info
+    let activityRaw = input;
+    dias.forEach(d => { activityRaw = activityRaw.replace(new RegExp(d, 'gi'), ''); });
+    const actividad = sanitizeName(activityRaw);
 
     return {
       name: 'gestionar_horario',
       args: {
         eventos: [{
-          dia: diaMatch.charAt(0).toUpperCase() + diaMatch.slice(1).replace('miércoles', 'Miercoles').replace('sábado', 'Sabado'),
+          dia: diaMatch,
           hora: horaFormatted,
-          horaFin: `${(hours + 2).toString().padStart(2, '0')}:${minutes}`, // Default +2h
+          horaFin: `${((hours + 2) % 24).toString().padStart(2, '0')}:${minutes}`, 
           actividad: actividad.toUpperCase(),
           tipo: 'clase',
           modalidad: text.includes('virtual') ? 'Virtual' : 'Presencial'

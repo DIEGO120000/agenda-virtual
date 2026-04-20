@@ -93,6 +93,11 @@ const SidebarAI: React.FC<Props> = ({
 
   const startRecording = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || (window as any).mozSpeechRecognition;
+    
+    if (navigator.userAgent.indexOf("Firefox") !== -1) {
+      console.log("NÚCLEO DE VOZ FIREFOX ACTIVADO");
+    }
+
     if (!SpeechRecognition) {
       setMessages(prev => [...prev, { role: 'error', text: "ERROR: NAVEGADOR NO SOPORTA DICTADO POR VOZ." }]);
       return;
