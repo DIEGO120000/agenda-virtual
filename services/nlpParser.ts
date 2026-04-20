@@ -19,26 +19,36 @@ export const nlpParser = (input: string) => {
     return d.toISOString().split('T')[0];
   };
 
-  const EXCLUDE_WORDS = ["tengo", "clase", "materia", "de", "los", "las", "el", "virtual", "presencial", "para", "el", "mañana"];
-  const DAYS_REGEX = /\b(lunes|martes|miercoles|miércoles|jueves|viernes|sabado|sábado|domingo|s)\b/gi;
-  const TIME_RANGE_REGEX = /(?:de\s+)?(\d{1,2}(?::\d{2})?)\s*(?:am|pm|a\.m\.|p\.m\.)?\s*(?:a|y|hasta)\s+(\d{1,2}(?::\d{2})?)\s*(am|pm|a\.m\.|p\.m\.)?/gi;
-  const SINGLE_TIME_REGEX = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?/gi;
-
+  const EXCLUDE_WORDS = ["tengo", "clase", "materia", "presencial", "virtual"];
+  const DAYS_LIST = ["lunes", "martes", "miercoles", "miércoles", "jueves", "viernes", "sabado", "sábados", "sabados", "sábado", "domingo", "s"];
+  
   const sanitizeName = (name: string) => {
     let clean = name.toLowerCase();
-    // 1. Eliminar rangos horarios completos (ej: de 2 a 6)
-    clean = clean.replace(TIME_RANGE_REGEX, '');
-    // 2. Eliminar horas sueltas (ej: 2pm)
-    clean = clean.replace(SINGLE_TIME_REGEX, '');
-    // 3. Eliminar días y la letra 's' como indicador de plural/día
-    clean = clean.replace(DAYS_REGEX, '');
-    // 4. Eliminar palabras de ruido
+    
+    // 1. Eliminar rangos horarios (de 2 a 6) y preposiciones asociadas
+    clean = clean.replace(/(?:de\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?\s*(?:a|y|hasta)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?/gi, '');
+    
+    // 2. Eliminar horas sueltas y referencias am/pm
+    clean = clean.replace(/\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)/gi, '');
+    clean = clean.replace(/\b(?:am|pm|a\.m\.|p\.m\.)\b/gi, '');
+    
+    // 3. Eliminar números aislados (que podrían ser horas remanentes)
+    clean = clean.replace(/\b\d{1,2}\b/g, '');
+
+    // 4. Eliminar Días y abreviaciones (incluyendo 's')
+    DAYS_LIST.forEach(day => {
+      const regex = new RegExp(`\\b${day}\\b`, 'gi');
+      clean = clean.replace(regex, '');
+    });
+
+    // 5. Eliminar palabras de ruido
     EXCLUDE_WORDS.forEach(word => {
       const regex = new RegExp(`\\b${word}\\b`, 'gi');
       clean = clean.replace(regex, '');
     });
-    // 5. Limpieza final: quitar "clase de" específicamente si quedó
-    clean = clean.replace(/\bclase\s+de\b/gi, '');
+
+    // 6. Limpieza de preposiciones residuales 'de'/'a' que suelen quedar
+    clean = clean.replace(/\b(?:de|a|en|el|los|las)\b/gi, '');
     
     const result = clean.trim().replace(/\s+/g, ' ');
     return result.charAt(0).toUpperCase() + result.slice(1);
@@ -74,12 +84,15 @@ export const nlpParser = (input: string) => {
 
   // 2. GESTIONAR HORARIO
   const dias = ['lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'sábado', 'domingo'];
+  const TIME_RANGE_REGEX = /(?:de\s+)?(\d{1,2}(?::\d{2})?)\s*(?:am|pm|a\.m\.|p\.m\.)?\s*(?:a|y|hasta)\s+(\d{1,2}(?::\d{2})?)\s*(am|pm|a\.m\.|p\.m\.)?/i;
+  const SINGLE_TIME_REGEX = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?/i;
+
   if (dias.some(d => text.includes(d)) || text.match(TIME_RANGE_REGEX) || text.match(SINGLE_TIME_REGEX)) {
     const rawDia = dias.find(d => text.includes(d)) || 'Lunes';
     const diaMatch = (rawDia.toLowerCase().includes('sabado') || rawDia.toLowerCase().includes('sábado')) ? 'Sábado' : rawDia.charAt(0).toUpperCase() + rawDia.slice(1).replace('miércoles', 'Miercoles');
     
     const isPM = text.includes('pm') || text.includes('p.m.');
-    const rangeMatch = [...text.matchAll(TIME_RANGE_REGEX)][0];
+    const rangeMatch = text.match(TIME_RANGE_REGEX);
     
     let horaInicio = "08:00";
     let horaFin = "10:00";
@@ -87,18 +100,20 @@ export const nlpParser = (input: string) => {
     if (rangeMatch) {
       let h1 = parseInt(rangeMatch[1]);
       let h2 = parseInt(rangeMatch[2]);
-      if (isPM && h1 < 12) h1 += 12;
-      if (isPM && h2 < 12) h2 += 12;
+      if (isPM) {
+        if (h1 < 12) h1 += 12;
+        if (h2 < 12) h2 += 12;
+      }
       horaInicio = `${h1.toString().padStart(2, '0')}:${rangeMatch[1].includes(':') ? rangeMatch[1].split(':')[1] : '00'}`;
       horaFin = `${h2.toString().padStart(2, '0')}:${rangeMatch[2].includes(':') ? rangeMatch[2].split(':')[1] : '00'}`;
     } else {
       const singleMatch = text.match(SINGLE_TIME_REGEX);
       if (singleMatch) {
-        const parts = singleMatch[0].match(/(\d{1,2})(?::(\d{2}))?/);
-        let h = parseInt(parts?.[1] || '8');
+        let h = parseInt(singleMatch[1]);
         if (isPM && h < 12) h += 12;
-        horaInicio = `${h.toString().padStart(2, '0')}:${parts?.[2] || '00'}`;
-        horaFin = `${((h + 2) % 24).toString().padStart(2, '0')}:${parts?.[2] || '00'}`;
+        const mins = singleMatch[2] || '00';
+        horaInicio = `${h.toString().padStart(2, '0')}:${mins}`;
+        horaFin = `${((h + 2) % 24).toString().padStart(2, '0')}:${mins}`;
       }
     }
     

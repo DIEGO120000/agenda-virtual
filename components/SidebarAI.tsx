@@ -110,6 +110,9 @@ const SidebarAI: React.FC<Props> = ({
 
     recognition.onstart = () => {
       setIsRecording(true);
+      if (navigator.userAgent.indexOf("Firefox") !== -1) {
+        console.log("NÚCLEO DE VOZ FIREFOX ACTIVADO");
+      }
     };
 
     recognition.onresult = (event: any) => {
