@@ -92,7 +92,7 @@ const SidebarAI: React.FC<Props> = ({
   };
 
   const startRecording = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || (window as any).mozSpeechRecognition;
     if (!SpeechRecognition) {
       setMessages(prev => [...prev, { role: 'error', text: "ERROR: NAVEGADOR NO SOPORTA DICTADO POR VOZ." }]);
       return;
@@ -115,6 +115,9 @@ const SidebarAI: React.FC<Props> = ({
 
     recognition.onerror = (event: any) => {
       console.error(event.error);
+      if (navigator.userAgent.indexOf("Firefox") !== -1) {
+        setMessages(prev => [...prev, { role: 'ai', text: "Firefox: Asegúrate de activar WebSpeech en about:config" }]);
+      }
       setIsRecording(false);
     };
 
@@ -122,8 +125,15 @@ const SidebarAI: React.FC<Props> = ({
       setIsRecording(false);
     };
 
-    recognition.start();
-    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (err) {
+      if (navigator.userAgent.indexOf("Firefox") !== -1) {
+        setMessages(prev => [...prev, { role: 'ai', text: "Firefox: Asegúrate de activar WebSpeech en about:config" }]);
+      }
+      setIsRecording(false);
+    }
   };
 
   const stopRecording = () => {
