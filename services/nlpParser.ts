@@ -25,29 +25,33 @@ export const nlpParser = (input: string) => {
   const sanitizeName = (name: string) => {
     let clean = name.toLowerCase();
     
-    // 1. Eliminar Rangos Horarios y Referencias de Tiempo (Ultra-Clean)
+    // 1. ELIMINACIÓN RADICAL DE RANGOS Y TIEMPO
     clean = clean.replace(/(?:de\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?\s*(?:a|y|hasta)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?/gi, '');
     clean = clean.replace(/\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)/gi, '');
     clean = clean.replace(/\b(?:am|pm|a\.m\.|p\.m\.)\b/gi, '');
     clean = clean.replace(/\b\d{1,2}\b/g, '');
 
-    // 2. Eliminar Días y Residuos (incluyendo 's' huérfana)
+    // 2. ELIMINACIÓN DE DÍAS Y RESIDUOS (incluye 's' huérfana)
     DAYS_LIST.forEach(day => {
       const regex = new RegExp(`\\b${day}\\b`, 'gi');
       clean = clean.replace(regex, '');
     });
 
-    // 3. Eliminar Palabras de Ruido y Conexión
+    // 3. ELIMINACIÓN DE PALABRAS DE ACCIÓN Y CONECTORES
     EXCLUDE_WORDS.forEach(word => {
       const regex = new RegExp(`\\b${word}\\b`, 'gi');
       clean = clean.replace(regex, '');
     });
 
-    // 4. Limpieza final: Quitar letras sueltas residuales al final (como la 's' de sabados)
+    // 4. LIMPIEZA DE PUNTOS Y CARACTERES RESIDUALES
+    clean = clean.replace(/\./g, '');
+    
+    // 5. LIMPIEZA FINAL DE ESPACIOS Y LETRAS SUELTAS
     clean = clean.trim().replace(/\s+([a-z])\b/gi, '').replace(/\b([a-z])\s+/gi, '');
     
     const result = clean.trim().replace(/\s+/g, ' ');
-    return result.charAt(0).toUpperCase() + result.slice(1);
+    if (!result) return "ACTIVIDAD";
+    return result.charAt(0).toUpperCase() + result.slice(1).toLowerCase();
   };
 
   // CLASIFICACIÓN Y EXTRACCIÓN
@@ -93,11 +97,11 @@ export const nlpParser = (input: string) => {
     let horaInicio = "08:00";
     let horaFin = "10:00";
 
-    if (rangeMatch) {
+    if (rangeMatch && rangeMatch[1] && rangeMatch[2]) {
       let h1 = parseInt(rangeMatch[1]);
       let h2 = parseInt(rangeMatch[2]);
       
-      // Aplicar +12 a ambos valores si se detecta PM en la frase
+      // MOTOR 24H: SUMA DUAL SI ES PM
       if (isPM) {
         if (h1 < 12) h1 += 12;
         if (h2 < 12) h2 += 12;
