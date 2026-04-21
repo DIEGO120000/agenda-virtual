@@ -11,7 +11,7 @@ import {
 } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBvNceB2K1Nzva6HZQcWRlcjoXLoddqYw",
+  apiKey: "AIzaSyBNfOqPVjxnCwR35fGGWrn36p8HHw-ZePM",
   authDomain: "agenda-virtual-48e4e.firebaseapp.com",
   projectId: "agenda-virtual-48e4e",
   storageBucket: "agenda-virtual-48e4e.firebasestorage.app",
@@ -24,8 +24,8 @@ if (typeof window !== 'undefined') { (window as any).FIREBASE_APPCHECK_DEBUG_TOK
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: 'select_account' });
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 setPersistence(auth, browserLocalPersistence).catch(() => {});
 

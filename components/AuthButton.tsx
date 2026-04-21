@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   auth, 
-  provider, 
+  googleProvider, 
   signInWithRedirect, 
   getRedirectResult, 
   signOut, 
@@ -28,7 +28,11 @@ const AuthButton: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleLogin = () => signInWithRedirect(auth, provider);
+  const handleLogin = () => {
+    console.log("Login iniciado con nueva API Key");
+    signInWithRedirect(auth, googleProvider);
+  };
+  
   const handleLogout = () => signOut(auth).then(() => setUser(null));
 
   return (
