@@ -22,18 +22,16 @@ const AuthCard: React.FC = () => {
     setError('');
     try {
       if (isRegister) {
-        // Registro de cuenta y creación de perfil privado en Firestore
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, "users", userCredential.user.uid), {
           email: email,
           createdAt: serverTimestamp(),
-          status: "ITLA_ACTIVE_MEMBER"
+          itlaStatus: "ActiveMember"
         });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err: any) {
-      console.error("Auth Exception:", err.code);
       setError(err.message.replace('Firebase: ', ''));
     } finally {
       setLoading(false);
@@ -48,7 +46,7 @@ const AuthCard: React.FC = () => {
             A-AI <span className="text-blue-500">Agenda</span>
           </h1>
           <p className="text-slate-500 text-[10px] font-black mt-3 tracking-[0.3em] uppercase border-y border-slate-800 py-2 inline-block">
-            SISTEMA DE GESTIÓN PRIVADA ITLA v6.0
+            SISTEMA PRIVADO DE GESTIÓN // ITLA v7.0
           </p>
         </div>
 
@@ -63,7 +61,7 @@ const AuthCard: React.FC = () => {
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
               type="email" 
-              placeholder="USUARIO@ITLA.EDU.DO" 
+              placeholder="CORREO ELECTRÓNICO" 
               className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-4 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700 uppercase"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -75,7 +73,7 @@ const AuthCard: React.FC = () => {
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
               type={showPassword ? "text" : "password"} 
-              placeholder="CLAVE DE ACCESO" 
+              placeholder="CONTRASEÑA" 
               className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-12 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -100,15 +98,15 @@ const AuthCard: React.FC = () => {
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : isRegister ? (
-              <><UserPlus size={18}/> CREAR MI CUENTA</>
+              <><UserPlus size={18}/> CREAR CUENTA NUEVA</>
             ) : (
-              <><LogIn size={18}/> ENTRAR AL SISTEMA</>
+              <><LogIn size={18}/> ACCEDER AL SISTEMA</>
             )}
           </button>
         </form>
 
         <p className="text-center mt-10 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-          {isRegister ? "¿YA TIENES UNA CUENTA?" : "¿NUEVO EN EL SISTEMA?"}{' '}
+          {isRegister ? "¿YA TIENES UNA CUENTA?" : "¿ERES NUEVO EN EL SISTEMA?"}{' '}
           <button 
             onClick={() => setIsRegister(!isRegister)}
             className="text-blue-500 hover:text-blue-400 transition-colors font-black"

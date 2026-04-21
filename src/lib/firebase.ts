@@ -19,17 +19,11 @@ const firebaseConfig = {
   appId: "1:937291727034:web:bad8557b864e3de6190283"
 };
 
-// Inicialización Singleton
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-// Exportación de Servicios Nucleares
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Persistencia de sesión local
-setPersistence(auth, browserLocalPersistence).catch((err) => {
-  console.error("Firebase Persistence Error:", err);
-});
+setPersistence(auth, browserLocalPersistence).catch(() => {});
 
 export { 
   signOut, 
