@@ -2,13 +2,18 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getAuth, 
   GoogleAuthProvider, 
+  EmailAuthProvider,
   browserLocalPersistence, 
   setPersistence, 
   signInWithRedirect, 
   getRedirectResult,
+  signInWithPopup,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
 } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBNfOqPVjxnCwR35fGGWrn36p8HHw-ZePM",
@@ -19,14 +24,20 @@ const firebaseConfig = {
   appId: "1:937291727034:web:bad8557b864e3de6190283"
 };
 
-// Singleton y Bypass de AppCheck para Firefox
-if (typeof window !== 'undefined') { (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true; }
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
 export const auth = getAuth(app);
+export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 setPersistence(auth, browserLocalPersistence).catch(() => {});
 
-export { signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged };
+export { 
+  signInWithRedirect, 
+  getRedirectResult, 
+  signInWithPopup,
+  signOut, 
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
+};
