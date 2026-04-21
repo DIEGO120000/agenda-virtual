@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   auth, 
   provider, 
-  signInWithRedirect, 
-  getRedirectResult, 
+  signInWithPopup, 
   signOut, 
   onAuthStateChanged 
 } from '../src/lib/firebase';
@@ -16,21 +15,24 @@ const AuthButton: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
-
-    getRedirectResult(auth).then((result) => {
-      if (result?.user) setUser(result.user);
-    }).catch(console.error);
-
     return () => unsubscribe();
   }, []);
 
-  const handleLogin = () => signInWithRedirect(auth, provider);
-  const handleLogout = () => signOut(auth);
+  const handleLogin = () => {
+    signInWithPopup(auth, provider)
+      .then((result) => setUser(result.user))
+      .catch(console.error);
+  };
+
+  const handleLogout = () => {
+    signOut(auth).then(() => setUser(null)).catch(console.error);
+  };
 
   return (
     <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 1000 }}>
       {user ? (
         <div style={{ background: 'white', padding: '0.5rem 1rem', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', color: 'black', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img src={user.photoURL || ''} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
           <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{user.displayName}</span>
           <button onClick={handleLogout} style={{ color: 'red', fontSize: '10px', fontWeight: 'bold', border: 'none', background: 'none', cursor: 'pointer' }}>SALIR</button>
         </div>

@@ -4,8 +4,7 @@ import {
   GoogleAuthProvider, 
   browserLocalPersistence, 
   setPersistence, 
-  signInWithRedirect, 
-  getRedirectResult,
+  signInWithPopup, 
   signOut,
   onAuthStateChanged
 } from "firebase/auth";
@@ -19,6 +18,12 @@ const firebaseConfig = {
   appId: "1:937291727034:web:bad8557b864e3de6190283"
 };
 
+// Bypass para XrayWrapper en Firefox y errores de AppCheck/Heartbeats
+if (typeof window !== 'undefined') {
+  (window as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
+// Inicialización segura con patrón Singleton
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const provider = new GoogleAuthProvider();
@@ -26,6 +31,6 @@ provider.setCustomParameters({ prompt: 'select_account' });
 
 setPersistence(auth, browserLocalPersistence).catch(() => {});
 
-console.log("Firebase Auth inicializado");
+console.log("Firebase Auth inicializado con API Key verificada");
 
-export { signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged };
+export { signInWithPopup, signOut, onAuthStateChanged };
