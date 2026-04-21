@@ -10,14 +10,12 @@ const firebaseConfig = {
   appId: "1:937291727034:web:bad8557b864e3de6190283"
 };
 
-// Singleton para evitar errores de re-inicialización y XrayWrapper
+// Singleton robusto
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
-// Persistencia robusta
-setPersistence(auth, browserLocalPersistence).catch((err) => {
-  console.error("Persistence error:", err);
-});
+// Persistencia local sin analíticas (bloqueado por Firefox en entornos cross-origin)
+setPersistence(auth, browserLocalPersistence).catch(() => {});
 
 export const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });

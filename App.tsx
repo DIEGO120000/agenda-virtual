@@ -8,10 +8,116 @@ import Sections from './components/Sections';
 import ScheduleSection from './components/ScheduleSection';
 import { PlusCircle, Calendar, ClipboardList, Moon, Sun } from 'lucide-react';
 
-// ... (generador de IDs)
+const generateId = () => {
+  return typeof crypto !== 'undefined' && crypto.randomUUID 
+    ? crypto.randomUUID() 
+    : Math.random().toString(36).substring(2, 11);
+};
 
 const App: React.FC = () => {
-  // ... (estados)
+  const [state, setState] = useState<AppState>(() => {
+    try {
+      const saved = localStorage.getItem('agenda_app_state_v3');
+      if (!saved) return { tareas: [], notas: [], pasatiempos: [], horario: [], calificaciones: [] };
+      const parsed = JSON.parse(saved);
+      return {
+        tareas: Array.isArray(parsed.tareas) ? parsed.tareas : [],
+        notas: Array.isArray(parsed.notas) ? parsed.notas : [],
+        pasatiempos: Array.isArray(parsed.pasatiempos) ? parsed.pasatiempos : [],
+        horario: Array.isArray(parsed.horario) ? parsed.horario : [],
+        calificaciones: Array.isArray(parsed.calificaciones) ? parsed.calificaciones : [],
+      };
+    } catch (e) {
+      return { tareas: [], notas: [], pasatiempos: [], horario: [], calificaciones: [] };
+    }
+  });
+
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('agenda_dark_mode');
+    if (saved !== null) return saved === 'true';
+    return (window as any).darkMode || false;
+  });
+
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('agenda_app_state_v3', JSON.stringify(state));
+  }, [state]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('agenda_dark_mode', darkMode.toString());
+    (window as any).darkMode = darkMode;
+  }, [darkMode]);
+
+  const bulkAddTasks = (nuevas: any[]) => {
+    const mapped = nuevas.map(t => ({
+      ...t, id: generateId(), ingreso: new Date().toISOString(), estado: EstadoTarea.PENDIENTE,
+    }));
+    setState(prev => ({ ...prev, tareas: [...prev.tareas, ...mapped] }));
+  };
+
+  const removeTasksByName = (nombres: string[]) => {
+    setState(prev => ({ 
+      ...prev, tareas: prev.tareas.filter(t => !nombres.some(n => t.nombre.toLowerCase().includes(n.toLowerCase()))) 
+    }));
+  };
+
+  const updateHorario = (eventos: any[]) => {
+    const conId = eventos.map(e => ({ ...e, id: generateId() }));
+    setState(prev => ({ ...prev, horario: [...prev.horario, ...conId] }));
+  };
+
+  const removeHorarioByCriteria = (criterios: string[]) => {
+    setState(prev => ({
+      ...prev, horario: prev.horario.filter(e => !criterios.some(c => e.actividad.toLowerCase().includes(c.toLowerCase())))
+    }));
+  };
+
+  const bulkAddNotas = (textos: string[]) => {
+    const mapped = textos.map(t => ({ id: generateId(), contenido: t, timestamp: new Date().toISOString() }));
+    setState(prev => ({ ...prev, notas: [...prev.notas, ...mapped] }));
+  };
+
+  const removeNotasByCriteria = (criterios: string[]) => {
+    setState(prev => ({
+      ...prev, notas: prev.notas.filter(n => !criterios.some(c => n.contenido.toLowerCase().includes(c.toLowerCase())))
+    }));
+  };
+
+  const bulkAddPasatiempos = (nombres: string[]) => {
+    const mapped = nombres.map(n => ({ id: generateId(), nombre: n, completado: false }));
+    setState(prev => ({ ...prev, pasatiempos: [...prev.pasatiempos, ...mapped] }));
+  };
+
+  const removePasatiemposByCriteria = (criterios: string[]) => {
+    setState(prev => ({
+      ...prev, pasatiempos: prev.pasatiempos.filter(p => !criterios.some(c => p.nombre.toLowerCase().includes(c.toLowerCase())))
+    }));
+  };
+
+  const addCalificacion = (materia: string, obtenido: number, total: number) => {
+    setState(prev => {
+      const existIndex = prev.calificaciones.findIndex(c => c.materia.toLowerCase() === materia.toLowerCase());
+      const nuevasCalificaciones = [...prev.calificaciones];
+      if (existIndex > -1) {
+        nuevasCalificaciones[existIndex] = {
+          ...nuevasCalificaciones[existIndex],
+          acumulado: nuevasCalificaciones[existIndex].acumulado + obtenido,
+          totalPosible: nuevasCalificaciones[existIndex].totalPosible + total
+        };
+      } else {
+        nuevasCalificaciones.push({ materia, acumulado: obtenido, totalPosible: total });
+      }
+      return { ...prev, calificaciones: nuevasCalificaciones };
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white transition-colors duration-300">

@@ -5,14 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Agenda Inteligente</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Definición global para evitar ReferenceErrors y advertencias de Tailwind -->
     <script>
-      tailwind.config = {
-        darkMode: 'class'
-      }
-      // Silenciar advertencia de producción del CDN
-      window.tailwind.config.production = true;
+      window.darkMode = localStorage.getItem('agenda_dark_mode') === 'true';
+      window.tailwind = { 
+        config: { 
+          darkMode: 'class',
+          production: true 
+        } 
+      };
     </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     
