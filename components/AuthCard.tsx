@@ -23,7 +23,7 @@ const AuthCard: React.FC = () => {
     try {
       if (isRegister) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // Inicializar perfil de usuario en Firestore para que pueda guardar sus tareas de una vez
+        // Inicialización de perfil en Firestore al registrarse
         await setDoc(doc(db, "users", userCredential.user.uid), {
           email: email,
           createdAt: serverTimestamp(),
@@ -47,8 +47,8 @@ const AuthCard: React.FC = () => {
           <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
             A-AI <span className="text-blue-500">Agenda</span>
           </h1>
-          <p className="text-slate-500 text-[9px] font-black mt-3 tracking-[0.3em] uppercase border-y border-slate-800 py-2 inline-block">
-            NÚCLEO PRIVADO DE DATOS // ITLA v4.0
+          <p className="text-slate-500 text-[10px] font-black mt-3 tracking-[0.3em] uppercase border-y border-slate-800 py-2 inline-block">
+            NÚCLEO PRIVADO DE DATOS ITLA v5.0
           </p>
         </div>
 
@@ -58,13 +58,13 @@ const AuthCard: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleAuth} className="space-y-5">
+        <form onSubmit={handleAuth} className="space-y-6">
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
               type="email" 
-              placeholder="CORREO@EJEMPLO.COM" 
-              className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-4 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700"
+              placeholder="TU@CORREO.COM" 
+              className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-4 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700 uppercase"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -75,7 +75,7 @@ const AuthCard: React.FC = () => {
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
               type={showPassword ? "text" : "password"} 
-              placeholder="CONTRASEÑA SEGURA" 
+              placeholder="CONTRASEÑA" 
               className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-12 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -94,21 +94,21 @@ const AuthCard: React.FC = () => {
             type="submit" 
             disabled={loading}
             className={`w-full py-5 rounded-2xl font-black text-xs tracking-[0.3em] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl uppercase ${
-              isRegister ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+              isRegister ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-900/20' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-900/20'
             }`}
           >
             {loading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : isRegister ? (
-              <><UserPlus size={18}/> CREAR CUENTA NUEVA</>
+              <><UserPlus size={18}/> CREAR MI CUENTA</>
             ) : (
-              <><LogIn size={18}/> ACCEDER AL SISTEMA</>
+              <><LogIn size={18}/> ENTRAR AL SISTEMA</>
             )}
           </button>
         </form>
 
         <p className="text-center mt-10 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-          {isRegister ? "¿YA TIENES UNA CUENTA?" : "¿NO ESTÁS REGISTRADO EN EL ITLA?"}{' '}
+          {isRegister ? "¿YA TIENES UNA CUENTA?" : "¿NUEVO EN EL SISTEMA?"}{' '}
           <button 
             onClick={() => setIsRegister(!isRegister)}
             className="text-blue-500 hover:text-blue-400 transition-colors"
