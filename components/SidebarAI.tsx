@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AppState } from '../types';
 import { nlpParser } from '../services/nlpParser';
 import { Send, Mic, MicOff, Loader2, ChevronUp, ChevronDown, Paperclip, Terminal, LogIn, LogOut } from 'lucide-react';
-import { auth, googleProvider } from '../src/lib/firebase';
+import { auth, provider } from '../src/lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 
 interface Props {
@@ -50,7 +50,7 @@ const SidebarAI: React.FC<Props> = ({
 
   const handleLogin = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error("Login Error:", error);
       setMessages(prev => [...prev, { role: 'error', text: `ERROR DE AUTENTICACIÓN: ${error.message}` }]);
@@ -242,7 +242,7 @@ const SidebarAI: React.FC<Props> = ({
                   className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-900/20"
                 >
                   <LogIn size={14} />
-                  <span className="text-[10px] mono font-bold uppercase tracking-wider">Entrar con Google</span>
+                  <span className="text-[10px] mono font-bold uppercase tracking-wider">ACCEDER CON GOOGLE</span>
                 </button>
               )}
               
