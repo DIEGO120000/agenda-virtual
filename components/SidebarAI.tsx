@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppState } from '../types';
 import { nlpParser } from '../services/nlpParser';
-import { Send, Mic, MicOff, Loader2, ChevronUp, ChevronDown, Paperclip, Terminal } from 'lucide-react';
+import { Send, Mic, MicOff, Loader2, ChevronUp, ChevronDown, Paperclip, Terminal, LogIn, LogOut } from 'lucide-react';
+import { auth, googleProvider } from '../src/lib/firebase';
+import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 
 interface Props {
   state: AppState;
@@ -28,15 +30,40 @@ const SidebarAI: React.FC<Props> = ({
   ]);
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages, loading, isExpanded]);
+
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error: any) {
+      console.error("Login Error:", error);
+      setMessages(prev => [...prev, { role: 'error', text: `ERROR DE AUTENTICACIÓN: ${error.message}` }]);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error: any) {
+      console.error("Logout Error:", error);
+    }
+  };
 
   const handleSend = async (textToProcess?: string) => {
     const trimmedInput = (textToProcess || input).trim();
@@ -196,6 +223,29 @@ const SidebarAI: React.FC<Props> = ({
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {user ? (
+                <div className="flex items-center gap-3 bg-slate-800/50 p-1 pr-3 rounded-2xl border border-slate-700/50">
+                  <img src={user.photoURL || ''} alt={user.displayName || ''} className="w-8 h-8 rounded-xl border border-blue-500/30" />
+                  <div className="hidden md:flex flex-col">
+                    <span className="text-[10px] font-bold text-white mono truncate max-w-[100px]">{user.displayName}</span>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleLogout(); }} 
+                      className="text-[8px] text-red-400 mono font-black uppercase text-left hover:text-red-300"
+                    >
+                      CERRAR SESIÓN
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleLogin(); }}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-900/20"
+                >
+                  <LogIn size={14} />
+                  <span className="text-[10px] mono font-bold uppercase tracking-wider">Entrar con Google</span>
+                </button>
+              )}
+              
               {!isExpanded && (
                 <div className="hidden md:flex items-center gap-4 mr-4">
                    <span className="mono text-[10px] text-slate-500 animate-pulse uppercase tracking-wider">Esperando táctica...</span>
