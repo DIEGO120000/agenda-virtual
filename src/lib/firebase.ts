@@ -9,7 +9,7 @@ import {
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Valores fijos (Hardcoded) para evitar conflictos con variables de entorno de Vite/Gemini
+// Configuración limpia sin caracteres ocultos y dominio verificado
 const firebaseConfig = {
   apiKey: "AIzaSyBNfOqPVjxnCwR35fGGWrn36p8HHw-ZePM",
   authDomain: "agenda-virtual-48e4e.firebaseapp.com",
@@ -21,7 +21,7 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Uso de initializeAuth para forzar persistencia y evitar configuration-not-found
+// Uso de initializeAuth con persistencia explícita para bypass de XrayWrapper
 export const auth = initializeAuth(app, {
   persistence: browserLocalPersistence
 });
