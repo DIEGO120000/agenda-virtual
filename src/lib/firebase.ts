@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from "firebase/auth";
 
 const firebaseConfig = {
@@ -10,12 +10,14 @@ const firebaseConfig = {
   appId: "1:937291727034:web:bad8557b864e3de6190283"
 };
 
-const app = initializeApp(firebaseConfig);
+// Singleton para evitar errores de re-inicialización y XrayWrapper
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
-// Configurar persistencia local
-setPersistence(auth, browserLocalPersistence);
+// Persistencia robusta
+setPersistence(auth, browserLocalPersistence).catch((err) => {
+  console.error("Persistence error:", err);
+});
 
 export const provider = new GoogleAuthProvider();
-// Forzar selección de cuenta
 provider.setCustomParameters({ prompt: 'select_account' });

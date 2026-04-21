@@ -34,13 +34,13 @@ const AuthButton: React.FC = () => {
       {user ? (
         <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1.5 pr-4 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 animate-in fade-in slide-in-from-top-4 duration-500">
           <img 
-            src={user.photoURL || ''} 
-            alt={user.displayName || ''} 
+            src={user?.photoURL || ''} 
+            alt={user?.displayName || ''} 
             className="w-10 h-10 rounded-xl border-2 border-blue-500/20 shadow-sm"
           />
           <div className="flex flex-col">
             <span className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-tighter truncate max-w-[120px]">
-              {user.displayName}
+              {user?.displayName}
             </span>
             <button 
               onClick={handleLogout}
