@@ -57,36 +57,40 @@ export const nlpParser = (input: string) => {
   // CLASIFICACIÓN Y EXTRACCIÓN
   
   // 1. GESTIONAR AGENDA (TAREAS)
-  const agendaKeywords = ['examen', 'parcial', 'tarea', 'entrega', 'proyecto', 'estudiar', 'subir', 'foro', 'práctica', 'practica'];
-  if (agendaKeywords.some(k => text.includes(k))) {
+  const academicSubjects = ['sociales', 'matematicas', 'matemáticas', 'programacion', 'programación', 'calculo', 'cálculo', 'fisica', 'física', 'quimica', 'química', 'historia', 'ingles', 'inglés', 'español', 'biologia', 'biología', 'orientacion', 'orientación'];
+  const agendaKeywords = ['examen', 'parcial', 'tarea', 'entrega', 'proyecto', 'estudiar', 'subir', 'foro', 'práctica', 'practica', 'tengo que', 'hay que', 'debo'];
+  
+  if (agendaKeywords.some(k => text.includes(k)) || academicSubjects.some(s => text.includes(s))) {
     const fecha = resolveDate(text);
     const isHigh = text.includes('final') || text.includes('parcial') || text.includes('60%');
     
-    // Extracción de criticidad/prioridad manual (ej: "prioridad 8")
     const priorityMatch = text.match(/(?:prioridad|valor|criticidad)\s*(\d{1,2})/i);
     let criticidad = priorityMatch ? parseInt(priorityMatch[1]) : (isHigh ? 10 : 5);
     let prioridad = isHigh || criticidad > 7 ? PrioridadTarea.ALTA : PrioridadTarea.MEDIA;
 
-    // Limpieza profunda para obtener el NOMBRE puro
-    let cleanName = text;
-    
-    // Eliminar keywords de agenda
-    agendaKeywords.forEach(k => { cleanName = cleanName.replace(new RegExp(`\\b${k}\\b`, 'gi'), ''); });
-    
-    // Eliminar indicadores de prioridad
-    cleanName = cleanName.replace(/(?:prioridad|valor|criticidad)\s*\d{1,2}/gi, '');
-    
-    // Eliminar preposiciones y conectores comunes al inicio
-    cleanName = cleanName.replace(/^(?:tengo|una|de|que|la|el|para|un|el|la)\s+/gi, '');
-    
-    // Usar sanitizeName para quitar fechas, horas y ruidos generales
-    const finalName = sanitizeName(cleanName);
+    let finalName = "";
+    const foundSubject = academicSubjects.find(s => text.includes(s));
+
+    if (foundSubject) {
+      // Caso Académico: Solo el nombre de la materia
+      finalName = foundSubject.charAt(0).toUpperCase() + foundSubject.slice(1);
+    } else {
+      // Caso General: Predicado limpio
+      let cleanName = text;
+      // Eliminar ruidos de inicio y tiempo
+      cleanName = cleanName.replace(/^(?:mañana|hoy|tengo que|hay que|debo|tengo una tarea de|tengo que|tengo|una|de|que|la|el|para|un|el|la)\s+/gi, '');
+      cleanName = cleanName.replace(/(?:para\s+)?(?:mañana|hoy|el\s+\w+)/gi, '');
+      cleanName = cleanName.replace(/\b(?:prioridad|valor|criticidad)\s*\d{1,2}\b/gi, '');
+      
+      // Conservar la acción y posible hora/detalle si no es materia
+      finalName = cleanName.trim().charAt(0).toUpperCase() + cleanName.trim().slice(1);
+    }
     
     return {
       name: 'gestionar_agenda',
       args: {
         tareas: [{
-          nombre: finalName.toUpperCase(),
+          nombre: finalName,
           recomendado: now.toISOString().split('T')[0],
           culminacion: fecha,
           criticidad: criticidad,
