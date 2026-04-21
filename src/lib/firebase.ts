@@ -1,8 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
-  getAuth, 
+  initializeAuth,
   browserLocalPersistence, 
-  setPersistence, 
   signOut, 
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -10,6 +9,7 @@ import {
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+// Valores fijos (Hardcoded) para evitar conflictos con variables de entorno de Vite/Gemini
 const firebaseConfig = {
   apiKey: "AIzaSyBNfOqPVjxnCwR35fGGWrn36p8HHw-ZePM",
   authDomain: "agenda-virtual-48e4e.firebaseapp.com",
@@ -19,19 +19,14 @@ const firebaseConfig = {
   appId: "1:937291727034:web:bad8557b864e3de6190283"
 };
 
-console.log("--- DEBUG FIREBASE CONFIG ---");
-console.log("Config Object:", JSON.stringify({ ...firebaseConfig, apiKey: "REDACTED_BUT_PRESENT" }));
-console.log("Vite Env Check:", import.meta.env);
-
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
-export const db = getFirestore(app);
 
-console.log("Auth Object Initialized:", !!auth);
-
-setPersistence(auth, browserLocalPersistence).catch((err) => {
-  console.error("--- DEBUG PERSISTENCE ERROR ---", err);
+// Uso de initializeAuth para forzar persistencia y evitar configuration-not-found
+export const auth = initializeAuth(app, {
+  persistence: browserLocalPersistence
 });
+
+export const db = getFirestore(app);
 
 export { 
   signOut, 
