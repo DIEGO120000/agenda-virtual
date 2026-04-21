@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signInWithPopup, 
-  googleProvider, 
-  auth 
+  auth,
+  db
 } from '../src/lib/firebase';
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Eye, EyeOff, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
 
 const AuthCard: React.FC = () => {
@@ -22,50 +22,49 @@ const AuthCard: React.FC = () => {
     setError('');
     try {
       if (isRegister) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Inicializar perfil de usuario en Firestore para que pueda guardar sus tareas de una vez
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          email: email,
+          createdAt: serverTimestamp(),
+          itlaStatus: "Active"
+        });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err: any) {
-      setError(err.message);
+      console.error("Auth Error:", err.code);
+      setError(err.message.replace('Firebase: ', ''));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogle = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl animate-in zoom-in duration-500">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-10 shadow-2xl animate-in zoom-in duration-500">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
             A-AI <span className="text-blue-500">Agenda</span>
           </h1>
-          <p className="text-slate-500 text-xs font-bold mt-2 tracking-widest uppercase">
-            Sistema Multi-Usuario Privado
+          <p className="text-slate-500 text-[9px] font-black mt-3 tracking-[0.3em] uppercase border-y border-slate-800 py-2 inline-block">
+            NÚCLEO PRIVADO DE DATOS // ITLA v4.0
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-[10px] font-bold p-3 rounded-xl mb-6 uppercase">
+          <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-[10px] font-bold p-4 rounded-2xl mb-8 uppercase text-center">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleAuth} className="space-y-4">
+        <form onSubmit={handleAuth} className="space-y-5">
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
               type="email" 
-              placeholder="CORREO ELECTRÓNICO" 
-              className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-4 py-4 rounded-2xl text-xs font-bold outline-none focus:border-blue-500 transition-colors"
+              placeholder="CORREO@EJEMPLO.COM" 
+              className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-4 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -76,8 +75,8 @@ const AuthCard: React.FC = () => {
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
               type={showPassword ? "text" : "password"} 
-              placeholder="CONTRASEÑA" 
-              className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-12 py-4 rounded-2xl text-xs font-bold outline-none focus:border-blue-500 transition-colors"
+              placeholder="CONTRASEÑA SEGURA" 
+              className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-12 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -94,34 +93,27 @@ const AuthCard: React.FC = () => {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black text-xs tracking-[0.2em] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-blue-900/20 uppercase"
+            className={`w-full py-5 rounded-2xl font-black text-xs tracking-[0.3em] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl uppercase ${
+              isRegister ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
           >
-            {loading ? "PROCESANDO..." : isRegister ? <><UserPlus size={18}/> Crear Cuenta</> : <><LogIn size={18}/> Iniciar Sesión</>}
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : isRegister ? (
+              <><UserPlus size={18}/> CREAR CUENTA NUEVA</>
+            ) : (
+              <><LogIn size={18}/> ACCEDER AL SISTEMA</>
+            )}
           </button>
         </form>
 
-        <div className="relative my-8">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
-          <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-500">
-            <span className="bg-slate-900 px-4">O continuar con</span>
-          </div>
-        </div>
-
-        <button 
-          onClick={handleGoogle}
-          className="w-full bg-white text-slate-950 py-4 rounded-2xl font-black text-xs tracking-[0.2em] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl uppercase"
-        >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-          Google Access
-        </button>
-
-        <p className="text-center mt-8 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-          {isRegister ? "¿Ya tienes cuenta?" : "¿Nuevo en el sistema?"}{' '}
+        <p className="text-center mt-10 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+          {isRegister ? "¿YA TIENES UNA CUENTA?" : "¿NO ESTÁS REGISTRADO EN EL ITLA?"}{' '}
           <button 
             onClick={() => setIsRegister(!isRegister)}
-            className="text-blue-500 hover:underline"
+            className="text-blue-500 hover:text-blue-400 transition-colors"
           >
-            {isRegister ? "INICIA SESIÓN AQUÍ" : "REGÍSTRATE AHORA"}
+            {isRegister ? "ENTRA AQUÍ" : "REGÍSTRATE GRATIS"}
           </button>
         </p>
       </div>
