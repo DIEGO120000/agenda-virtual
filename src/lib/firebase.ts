@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBvNceB2K1Nzva6HZQcWRlcjoXLoddqYw",
@@ -12,4 +12,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+// Configurar persistencia local
+setPersistence(auth, browserLocalPersistence);
+
 export const provider = new GoogleAuthProvider();
+// Forzar selección de cuenta
+provider.setCustomParameters({ prompt: 'select_account' });
