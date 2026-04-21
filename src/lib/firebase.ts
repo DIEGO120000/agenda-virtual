@@ -19,15 +19,13 @@ const firebaseConfig = {
   appId: "1:937291727034:web:bad8557b864e3de6190283"
 };
 
-// Singleton robusto
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
-
-// Persistencia local obligatoria
-setPersistence(auth, browserLocalPersistence).catch(() => {});
-
 export const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
-// Exportar métodos de utilidad
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+console.log("Firebase Auth inicializado");
+
 export { signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged };

@@ -33,9 +33,7 @@ const App: React.FC = () => {
   });
 
   const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('agenda_dark_mode');
-    if (saved !== null) return saved === 'true';
-    return (window as any).darkMode || false;
+    return localStorage.getItem('agenda_dark_mode') === 'true';
   });
 
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
@@ -53,7 +51,6 @@ const App: React.FC = () => {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('agenda_dark_mode', darkMode.toString());
-    (window as any).darkMode = darkMode;
   }, [darkMode]);
 
   const bulkAddTasks = (nuevas: any[]) => {

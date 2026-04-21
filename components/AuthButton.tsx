@@ -8,90 +8,38 @@ import {
   onAuthStateChanged 
 } from '../src/lib/firebase';
 import { User } from 'firebase/auth';
-import { LogOut, Loader2 } from 'lucide-react';
 
 const AuthButton: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Escuchar cambios de estado de autenticación
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
     });
 
-    // Capturar el resultado del redireccionamiento cuando la página carga de nuevo
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          setUser(result.user);
-        }
-      })
-      .catch((error) => {
-        console.error("Redirect Login Error:", error);
-        setLoading(false);
-      });
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) setUser(result.user);
+    }).catch(console.error);
 
     return () => unsubscribe();
   }, []);
 
-  const handleLogin = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      await signInWithRedirect(auth, provider);
-    } catch (error: any) {
-      console.error("Login Initiating Error:", error);
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      setLoading(true);
-      await signOut(auth);
-    } catch (error: any) {
-      console.error("Logout Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleLogin = () => signInWithRedirect(auth, provider);
+  const handleLogout = () => signOut(auth);
 
   return (
-    <div className="fixed top-4 right-4 z-[1000] flex items-center gap-3">
+    <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 1000 }}>
       {user ? (
-        <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1.5 pr-4 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 animate-in fade-in slide-in-from-top-4 duration-500">
-          <img 
-            src={user?.photoURL || ''} 
-            alt={user?.displayName || ''} 
-            className="w-10 h-10 rounded-xl border-2 border-blue-500/20 shadow-sm"
-          />
-          <div className="flex flex-col">
-            <span className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-tighter truncate max-w-[120px]">
-              {user?.displayName}
-            </span>
-            <button 
-              onClick={handleLogout}
-              disabled={loading}
-              className="text-[9px] font-bold text-red-500 hover:text-red-600 transition-colors flex items-center gap-1 uppercase tracking-widest disabled:opacity-50"
-            >
-              {loading ? <Loader2 size={10} className="animate-spin" /> : <LogOut size={10} />} SALIR
-            </button>
-          </div>
+        <div style={{ background: 'white', padding: '0.5rem 1rem', borderRadius: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', color: 'black', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{user.displayName}</span>
+          <button onClick={handleLogout} style={{ color: 'red', fontSize: '10px', fontWeight: 'bold', border: 'none', background: 'none', cursor: 'pointer' }}>SALIR</button>
         </div>
       ) : (
         <button 
           onClick={handleLogin}
-          disabled={loading}
-          className="flex items-center gap-3 bg-white text-gray-900 px-5 py-2.5 rounded-2xl font-black text-[11px] tracking-widest shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] hover:shadow-none hover:bg-gray-50 transition-all active:scale-95 border border-gray-200 uppercase disabled:opacity-70"
+          style={{ background: 'white', color: 'black', padding: '0.75rem 1.5rem', borderRadius: '1rem', fontWeight: 'bold', border: '1px solid #ddd', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
         >
-          {loading ? (
-            <Loader2 size={16} className="animate-spin text-blue-600" />
-          ) : (
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
-          )}
-          {loading ? "CONECTANDO..." : "ACCEDER CON GOOGLE"}
+          ENTRAR CON GOOGLE
         </button>
       )}
     </div>
