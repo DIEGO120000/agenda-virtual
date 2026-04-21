@@ -20,19 +20,30 @@ const AuthCard: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
+    console.log(`--- DEBUG AUTH START: ${isRegister ? 'REGISTER' : 'LOGIN'} ---`);
+    console.log("Current Auth Object State:", auth);
+
     try {
       if (isRegister) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, "users", userCredential.user.uid), {
           email: email,
           createdAt: serverTimestamp(),
-          itlaStatus: "ActiveMember"
+          debug: "TRACE_REGISTER_SUCCESS"
         });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
+      console.log("--- DEBUG AUTH SUCCESS ---");
     } catch (err: any) {
-      setError(err.message.replace('Firebase: ', ''));
+      console.error("--- DEBUG AUTH ERROR ---");
+      console.error("Code:", err.code);
+      console.error("Message:", err.message);
+      console.error("Full Error Object:", JSON.stringify(err));
+      console.error("Auth Object at Error:", auth);
+      
+      setError(`[${err.code}] ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -43,15 +54,15 @@ const AuthCard: React.FC = () => {
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-10 shadow-2xl animate-in zoom-in duration-500">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">
-            A-AI <span className="text-blue-500">Agenda</span>
+            DEBUG <span className="text-blue-500">MODE</span>
           </h1>
           <p className="text-slate-500 text-[10px] font-black mt-3 tracking-[0.3em] uppercase border-y border-slate-800 py-2 inline-block">
-            SISTEMA PRIVADO DE GESTIÓN // ITLA v7.0
+            TRAZABILIDAD DE ERRORES FIREBASE
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-[10px] font-bold p-4 rounded-2xl mb-8 uppercase text-center">
+          <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-[10px] font-black p-4 rounded-2xl mb-8 uppercase text-center overflow-x-auto whitespace-pre-wrap">
             {error}
           </div>
         )}
@@ -61,7 +72,7 @@ const AuthCard: React.FC = () => {
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
               type="email" 
-              placeholder="CORREO ELECTRÓNICO" 
+              placeholder="USUARIO@EJEMPLO.COM" 
               className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-4 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700 uppercase"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -81,7 +92,10 @@ const AuthCard: React.FC = () => {
             />
             <button 
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={() => {
+                console.log("DEBUG: Toggle Password Visibility");
+                setShowPassword(!showPassword);
+              }}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -98,15 +112,15 @@ const AuthCard: React.FC = () => {
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : isRegister ? (
-              <><UserPlus size={18}/> CREAR CUENTA NUEVA</>
+              <><UserPlus size={18}/> TRAZAR REGISTRO</>
             ) : (
-              <><LogIn size={18}/> ACCEDER AL SISTEMA</>
+              <><LogIn size={18}/> TRAZAR LOGIN</>
             )}
           </button>
         </form>
 
         <p className="text-center mt-10 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-          {isRegister ? "¿YA TIENES UNA CUENTA?" : "¿ERES NUEVO EN EL SISTEMA?"}{' '}
+          {isRegister ? "¿CAMBIAR A LOGIN?" : "¿CAMBIAR A REGISTRO?"}{' '}
           <button 
             onClick={() => setIsRegister(!isRegister)}
             className="text-blue-500 hover:text-blue-400 transition-colors font-black"

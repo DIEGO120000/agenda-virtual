@@ -19,11 +19,19 @@ const firebaseConfig = {
   appId: "1:937291727034:web:bad8557b864e3de6190283"
 };
 
+console.log("--- DEBUG FIREBASE CONFIG ---");
+console.log("Config Object:", JSON.stringify({ ...firebaseConfig, apiKey: "REDACTED_BUT_PRESENT" }));
+console.log("Vite Env Check:", import.meta.env);
+
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-setPersistence(auth, browserLocalPersistence).catch(() => {});
+console.log("Auth Object Initialized:", !!auth);
+
+setPersistence(auth, browserLocalPersistence).catch((err) => {
+  console.error("--- DEBUG PERSISTENCE ERROR ---", err);
+});
 
 export { 
   signOut, 
