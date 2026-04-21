@@ -1,67 +1,65 @@
+
 import React, { useState, useEffect } from 'react';
-import { EstadoTarea, AppState } from './types';
+import { Tarea, Nota, Pasatiempo, AppState, EstadoTarea, EventoHorario, PrioridadTarea } from './types';
 import AgendaTable from './components/AgendaTable';
 import SidebarAI from './components/SidebarAI';
-import AuthCard from './components/AuthCard';
 import TaskForm from './components/TaskForm';
 import Sections from './components/Sections';
 import ScheduleSection from './components/ScheduleSection';
-import { PlusCircle, Calendar, ClipboardList, Moon, Sun, LogOut } from 'lucide-react';
-import { auth, onAuthStateChanged, signOut } from './src/lib/firebase';
-import { dbService } from './services/dbService';
-import { User } from 'firebase/auth';
-
-const generateId = () => {
-  return typeof crypto !== 'undefined' && crypto.randomUUID 
-    ? crypto.randomUUID() 
-    : Math.random().toString(36).substring(2, 11);
-};
+import Login from './components/Login';
+import { PlusCircle, Calendar, ClipboardList, Moon, Sun, LogOut, Loader2 } from 'lucide-react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './firebase/config';
+import { logout } from './services/auth';
+import { saveData, getMyData } from './services/db';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const [state, setState] = useState<AppState>({ 
-    tareas: [], notas: [], pasatiempos: [], horario: [], calificaciones: [] 
+    tareas: [], 
+    notas: [], 
+    pasatiempos: [], 
+    horario: [] 
   });
 
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('agenda_dark_mode') === 'true');
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Manejo de Autenticación
+  // Observador de Auth
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        await loadUserData();
-      } else {
-        setState({ tareas: [], notas: [], pasatiempos: [], horario: [], calificaciones: [] });
-      }
-      setLoading(false);
+      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  const loadUserData = async () => {
-    try {
-      const [tareas, notas, pasatiempos, horario, calificaciones] = await Promise.all([
-        dbService.getPrivateData('tareas'),
-        dbService.getPrivateData('notas'),
-        dbService.getPrivateData('pasatiempos'),
-        dbService.getPrivateData('horario'),
-        dbService.getPrivateData('calificaciones'),
-      ]);
-      setState({ 
-        tareas: tareas as any, 
-        notas: notas as any, 
-        pasatiempos: pasatiempos as any, 
-        horario: horario as any, 
-        calificaciones: calificaciones as any 
-      });
-    } catch (error) {
-      console.error("Error loading data:", error);
+  // Cargar datos de Firestore al autenticar
+  useEffect(() => {
+    if (user) {
+      const fetchData = async () => {
+        try {
+          const [tareas, notas, pasatiempos, horario] = await Promise.all([
+            getMyData('tareas'),
+            getMyData('notas'),
+            getMyData('pasatiempos'),
+            getMyData('horario')
+          ]);
+          setState({
+            tareas: tareas as Tarea[],
+            notas: notas as Nota[],
+            pasatiempos: pasatiempos as Pasatiempo[],
+            horario: horario as EventoHorario[]
+          });
+        } catch (error) {
+          console.error("Error cargando datos:", error);
+        }
+      };
+      fetchData();
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -73,28 +71,97 @@ const App: React.FC = () => {
     localStorage.setItem('agenda_dark_mode', darkMode.toString());
   }, [darkMode]);
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
-
-  if (!user) return <AuthCard />;
-
-  const handleLogout = () => signOut(auth);
-
-  // Handlers sincronizados con Firestore
-  const bulkAddTasks = async (nuevas: any[]) => {
-    const mapped = nuevas.map(t => ({
-      ...t, id: generateId(), ingreso: new Date().toISOString(), estado: EstadoTarea.PENDIENTE,
-    }));
-    for (const t of mapped) {
-      await dbService.addData('tareas', t);
+  // Handlers sincronizados con DB
+  const handleAddTask = async (t: any) => {
+    const nuevaTarea = {
+      ...t,
+      ingreso: new Date().toISOString(),
+      estado: EstadoTarea.PENDIENTE,
+    };
+    try {
+      const id = await saveData('tareas', nuevaTarea);
+      setState(p => ({ ...p, tareas: [...p.tareas, { ...nuevaTarea, id }] }));
+    } catch (err) {
+      console.error(err);
     }
-    await loadUserData();
   };
 
-  // ... (otros handlers similares que usen dbService)
+  const bulkAddTasks = (nuevas: any[]) => {
+    nuevas.forEach(t => handleAddTask(t));
+  };
+
+  const removeTasksByName = (nombres: string[]) => {
+    setState(prev => ({ 
+      ...prev, 
+      tareas: prev.tareas.filter(t => !nombres.some(n => t.nombre.toLowerCase().includes(n.toLowerCase()))) 
+    }));
+  };
+
+  const updateHorario = async (eventos: any[]) => {
+    for (const e of eventos) {
+      try {
+        const id = await saveData('horario', e);
+        setState(prev => ({ ...prev, horario: [...prev.horario, { ...e, id }] }));
+      } catch (err) { console.error(err); }
+    }
+  };
+
+  const removeHorarioByCriteria = (criterios: string[]) => {
+    setState(prev => ({
+      ...prev,
+      horario: prev.horario.filter(e => !criterios.some(c => e.actividad.toLowerCase().includes(c.toLowerCase())))
+    }));
+  };
+
+  const addNota = async (contenido: string) => {
+    const nuevaNota = { contenido, timestamp: new Date().toISOString() };
+    try {
+      const id = await saveData('notas', nuevaNota);
+      setState(p => ({ ...p, notas: [...p.notas, { ...nuevaNota, id }] }));
+    } catch (err) { console.error(err); }
+  };
+
+  const bulkAddNotas = (textos: string[]) => {
+    textos.forEach(t => addNota(t));
+  };
+
+  const removeNotasByCriteria = (criterios: string[]) => {
+    setState(prev => ({
+      ...prev,
+      notas: prev.notas.filter(n => !criterios.some(c => n.contenido.toLowerCase().includes(c.toLowerCase())))
+    }));
+  };
+
+  const addPasatiempo = async (nombre: string) => {
+    const nuevoP = { nombre, completado: false };
+    try {
+      const id = await saveData('pasatiempos', nuevoP);
+      setState(p => ({ ...p, pasatiempos: [...p.pasatiempos, { ...nuevoP, id }] }));
+    } catch (err) { console.error(err); }
+  };
+
+  const bulkAddPasatiempos = (nombres: string[]) => {
+    nombres.forEach(n => addPasatiempo(n));
+  };
+
+  const removePasatiemposByCriteria = (criterios: string[]) => {
+    setState(prev => ({
+      ...prev,
+      pasatiempos: prev.pasatiempos.filter(p => !criterios.some(c => p.nombre.toLowerCase().includes(c.toLowerCase())))
+    }));
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login onAuthSuccess={() => {}} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white transition-colors duration-300">
@@ -102,20 +169,18 @@ const App: React.FC = () => {
         <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="animate-in fade-in slide-in-from-left duration-700">
             <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3">
-              <Calendar className="text-blue-600" size={32} /> FORMATO A <span className="text-blue-600">CENTRAL</span>
+              <Calendar className="text-blue-600" size={32} /> FORMATO A <span className="text-blue-600">CENTRAL v6.0</span>
             </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.email}`} className="w-5 h-5 rounded-full" alt="" />
-              <p className="text-gray-400 text-[8px] font-bold uppercase tracking-widest">
-                SESIÓN ACTIVA: {user.email}
-              </p>
-            </div>
+            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1 ml-1 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> 
+              Operador: {user.email}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
               {darkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-600" />}
             </button>
-            <button onClick={handleLogout} className="p-2.5 rounded-xl bg-red-100 dark:bg-red-900/20 text-red-600 hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors" title="Cerrar Sesión">
+            <button onClick={() => logout()} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-gray-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-all">
               <LogOut size={20} />
             </button>
             <button onClick={() => setIsTaskFormOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-black text-xs tracking-widest flex items-center gap-2 shadow-lg transition-all active:scale-95 uppercase">
@@ -127,58 +192,54 @@ const App: React.FC = () => {
         <section className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden mb-8 animate-in fade-in zoom-in-95 duration-500">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2 bg-gray-50/50 dark:bg-slate-800/30">
             <ClipboardList className="text-blue-600" size={18} />
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-slate-400">Datos Sincronizados (Firestore)</h2>
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-slate-400">Módulo de Seguimiento Dinámico</h2>
           </div>
           <AgendaTable 
             tareas={state.tareas} 
             now={currentTime}
-            updateTask={async (id, upds) => {
-              const tarea = state.tareas.find(t => t.id === id);
-              if (tarea && (tarea as any).id) await dbService.updateData('tareas', (tarea as any).id, upds);
-              await loadUserData();
-            }}
-            removeTask={async (id) => {
-              const tarea = state.tareas.find(t => t.id === id);
-              if (tarea && (tarea as any).id) await dbService.deleteData('tareas', (tarea as any).id);
-              await loadUserData();
-            }}
+            updateTask={(id, upds) => setState(p => ({ ...p, tareas: p.tareas.map(t => t.id === id ? {...t, ...upds} : t) }))}
+            removeTask={(id) => setState(p => ({ ...p, tareas: p.tareas.filter(t => t.id !== id) }))}
           />
         </section>
 
-        {/* ... Resto de componentes ... */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <ScheduleSection 
+              horario={state.horario} 
+              onRemove={(id) => setState(p => ({ ...p, horario: p.horario.filter(e => e.id !== id) }))}
+              onClear={() => setState(p => ({ ...p, horario: [] }))}
+            />
+          </div>
+          <div className="space-y-8">
+            <Sections 
+              notas={state.notas} 
+              pasatiempos={state.pasatiempos}
+              addNota={addNota}
+              removeNota={(id) => setState(p => ({ ...p, notas: p.notas.filter(n => n.id !== id) }))}
+              addPasatiempo={addPasatiempo}
+              togglePasatiempo={(id) => setState(p => ({ ...p, pasatiempos: p.pasatiempos.map(p => p.id === id ? {...p, completado: !p.completado} : p) }))}
+              removePasatiempo={(id) => setState(p => ({ ...p, pasatiempos: p.pasatiempos.filter(p => p.id !== id) }))}
+            />
+          </div>
+        </div>
       </main>
 
       <SidebarAI 
         state={state}
         onAIAddTask={bulkAddTasks}
-        // ... otros handlers ...
-        onAIAddCalificacion={async (materia, obtenido, total) => {
-          await dbService.addData('calificaciones', { materia, obtenido, total });
-          await loadUserData();
-        }}
-        onAIRemoveTasks={() => {}} // Implementar según necesidad
-        onAIUpdateHorario={() => {}}
-        onAIRemoveHorario={() => {}}
-        onAIAddNotas={async (notas) => {
-          for (const n of notas) await dbService.addData('notas', { contenido: n });
-          await loadUserData();
-        }}
-        onAIRemoveNotas={() => {}}
-        onAIAddPasatiempos={async (pasa) => {
-          for (const p of pasa) await dbService.addData('pasatiempos', { nombre: p, completado: false });
-          await loadUserData();
-        }}
-        onAIRemovePasatiempos={() => {}}
+        onAIRemoveTasks={removeTasksByName}
+        onAIUpdateHorario={updateHorario}
+        onAIRemoveHorario={removeHorarioByCriteria}
+        onAIAddNotas={bulkAddNotas}
+        onAIRemoveNotas={removeNotasByCriteria}
+        onAIAddPasatiempos={bulkAddPasatiempos}
+        onAIRemovePasatiempos={removePasatiemposByCriteria}
       />
 
       {isTaskFormOpen && (
         <TaskForm 
           onClose={() => setIsTaskFormOpen(false)} 
-          onSubmit={async (t) => {
-            await dbService.addData('tareas', {...t, id: generateId(), ingreso: new Date().toISOString(), estado: EstadoTarea.PENDIENTE});
-            await loadUserData();
-            setIsTaskFormOpen(false);
-          }} 
+          onSubmit={handleAddTask} 
         />
       )}
     </div>
