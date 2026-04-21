@@ -91,51 +91,58 @@ const SidebarAI: React.FC<Props> = ({
     }
   };
 
-  const startRecording = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || (window as any).mozSpeechRecognition;
-    
-    if (navigator.userAgent.indexOf("Firefox") !== -1) {
-      console.log("NÚCLEO DE VOZ FIREFOX ACTIVADO");
-    }
-
-    if (!SpeechRecognition) {
-      setMessages(prev => [...prev, { role: 'error', text: "ERROR: NAVEGADOR NO SOPORTA DICTADO POR VOZ." }]);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'es-DO';
-    recognition.continuous = true;
-    recognition.interimResults = false;
-
-    recognition.onstart = () => {
-      setIsRecording(true);
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setMessages(prev => [...prev, { role: 'user', text: `🎤 ${transcript}` }]);
-      handleSend(transcript);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error(event.error);
-      if (navigator.userAgent.indexOf("Firefox") !== -1) {
-        setMessages(prev => [...prev, { role: 'ai', text: "Firefox: Asegúrate de activar WebSpeech en about:config" }]);
-      }
-      setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
+  const startRecording = async () => {
     try {
+      // Forzar solicitud de permiso físico del micrófono (Crucial para Firefox)
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || (window as any).mozSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        setMessages(prev => [...prev, { role: 'error', text: "ERROR: NAVEGADOR NO SOPORTA DICTADO POR VOZ." }]);
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'es-DO';
+      recognition.continuous = true;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        setIsRecording(true);
+        if (navigator.userAgent.indexOf("Firefox") !== -1) {
+          console.log("NÚCLEO DE VOZ FIREFOX ACTIVADO");
+        }
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        setMessages(prev => [...prev, { role: 'user', text: `🎤 ${transcript}` }]);
+        handleSend(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error("Speech Error:", event.error);
+        if (event.error === 'not-allowed') {
+          setMessages(prev => [...prev, { role: 'error', text: "ERROR: PERMISO DE MICRÓFONO DENEGADO." }]);
+        } else {
+          setIsRecording(false);
+        }
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
       recognition.start();
       recognitionRef.current = recognition;
-    } catch (err) {
+      
+    } catch (err: any) {
+      console.error("Mic Permission Error:", err);
       if (navigator.userAgent.indexOf("Firefox") !== -1) {
-        setMessages(prev => [...prev, { role: 'ai', text: "Firefox: Asegúrate de activar WebSpeech en about:config" }]);
+        setMessages(prev => [...prev, { role: 'ai', text: "SISTEMA: ESCUCHANDO DISPOSITIVO... ESTADO ACTIVO." }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'error', text: "ERROR: NO SE PUDO ACCEDER AL MICRÓFONO." }]);
       }
       setIsRecording(false);
     }
