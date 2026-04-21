@@ -59,24 +59,38 @@ export const nlpParser = (input: string) => {
   // 1. GESTIONAR AGENDA (TAREAS)
   const agendaKeywords = ['examen', 'parcial', 'tarea', 'entrega', 'proyecto', 'estudiar', 'subir', 'foro', 'práctica', 'practica'];
   if (agendaKeywords.some(k => text.includes(k))) {
-    const materiaMatch = text.match(/(?:de|en)\s+([a-z0-9\sáéíóúñ]+?)(?:\s+para|\s+el|\s+mañana|$)/i);
-    let rawMateria = materiaMatch ? materiaMatch[1].trim() : text;
-    if (agendaKeywords.includes(rawMateria.toLowerCase())) {
-        rawMateria = text.replace(new RegExp(agendaKeywords.join('|'), 'gi'), '');
-    }
-    const materia = sanitizeName(rawMateria);
     const fecha = resolveDate(text);
     const isHigh = text.includes('final') || text.includes('parcial') || text.includes('60%');
+    
+    // Extracción de criticidad/prioridad manual (ej: "prioridad 8")
+    const priorityMatch = text.match(/(?:prioridad|valor|criticidad)\s*(\d{1,2})/i);
+    let criticidad = priorityMatch ? parseInt(priorityMatch[1]) : (isHigh ? 10 : 5);
+    let prioridad = isHigh || criticidad > 7 ? PrioridadTarea.ALTA : PrioridadTarea.MEDIA;
+
+    // Limpieza profunda para obtener el NOMBRE puro
+    let cleanName = text;
+    
+    // Eliminar keywords de agenda
+    agendaKeywords.forEach(k => { cleanName = cleanName.replace(new RegExp(`\\b${k}\\b`, 'gi'), ''); });
+    
+    // Eliminar indicadores de prioridad
+    cleanName = cleanName.replace(/(?:prioridad|valor|criticidad)\s*\d{1,2}/gi, '');
+    
+    // Eliminar preposiciones y conectores comunes al inicio
+    cleanName = cleanName.replace(/^(?:tengo|una|de|que|la|el|para|un|el|la)\s+/gi, '');
+    
+    // Usar sanitizeName para quitar fechas, horas y ruidos generales
+    const finalName = sanitizeName(cleanName);
     
     return {
       name: 'gestionar_agenda',
       args: {
         tareas: [{
-          nombre: `${materia.toUpperCase()}: ${input}`,
+          nombre: finalName.toUpperCase(),
           recomendado: now.toISOString().split('T')[0],
           culminacion: fecha,
-          criticidad: isHigh ? 10 : 5,
-          prioridad: isHigh ? PrioridadTarea.ALTA : PrioridadTarea.MEDIA
+          criticidad: criticidad,
+          prioridad: prioridad
         }]
       }
     };
