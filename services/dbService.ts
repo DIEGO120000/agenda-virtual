@@ -12,9 +12,8 @@ import {
 import { db, auth } from "../src/lib/firebase";
 
 export const dbService = {
-  // Asegurar que el usuario esté autenticado
   async ensureUser() {
-    if (!auth.currentUser) throw new Error("Acceso denegado: Usuario no autenticado");
+    if (!auth.currentUser) throw new Error("SESIÓN NO INICIADA");
     return auth.currentUser.uid;
   },
 
@@ -22,14 +21,14 @@ export const dbService = {
     const uid = await this.ensureUser();
     return addDoc(collection(db, collectionName), {
       ...data,
-      ownerUid: uid,
+      userId: uid, // Vinculación directa con el ID del usuario
       createdAt: Timestamp.now()
     });
   },
 
   async getPrivateData(collectionName: string) {
     const uid = await this.ensureUser();
-    const q = query(collection(db, collectionName), where("ownerUid", "==", uid));
+    const q = query(collection(db, collectionName), where("userId", "==", uid));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   },
