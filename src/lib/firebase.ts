@@ -1,5 +1,14 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  browserLocalPersistence, 
+  setPersistence, 
+  signInWithRedirect, 
+  getRedirectResult,
+  signOut,
+  onAuthStateChanged
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBvNceB2K1Nzva6HZQcWRlcjoXLoddqYw",
@@ -14,8 +23,11 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
-// Persistencia local sin analíticas (bloqueado por Firefox en entornos cross-origin)
+// Persistencia local obligatoria
 setPersistence(auth, browserLocalPersistence).catch(() => {});
 
 export const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
+
+// Exportar métodos de utilidad
+export { signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged };

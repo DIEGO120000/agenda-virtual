@@ -1,31 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { auth, provider } from '../src/lib/firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { LogIn, LogOut } from 'lucide-react';
+import { 
+  auth, 
+  provider, 
+  signInWithRedirect, 
+  getRedirectResult, 
+  signOut, 
+  onAuthStateChanged 
+} from '../src/lib/firebase';
+import { User } from 'firebase/auth';
+import { LogOut, Loader2 } from 'lucide-react';
 
 const AuthButton: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Escuchar cambios de estado de autenticación
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setLoading(false);
     });
+
+    // Capturar el resultado del redireccionamiento cuando la página carga de nuevo
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setUser(result.user);
+        }
+      })
+      .catch((error) => {
+        console.error("Redirect Login Error:", error);
+        setLoading(false);
+      });
+
     return () => unsubscribe();
   }, []);
 
   const handleLogin = async () => {
+    if (loading) return;
+    setLoading(true);
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
-      console.error("Login Error:", error);
+      console.error("Login Initiating Error:", error);
+      setLoading(false);
     }
   };
 
   const handleLogout = async () => {
     try {
+      setLoading(true);
       await signOut(auth);
     } catch (error: any) {
       console.error("Logout Error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,19 +73,25 @@ const AuthButton: React.FC = () => {
             </span>
             <button 
               onClick={handleLogout}
-              className="text-[9px] font-bold text-red-500 hover:text-red-600 transition-colors flex items-center gap-1 uppercase tracking-widest"
+              disabled={loading}
+              className="text-[9px] font-bold text-red-500 hover:text-red-600 transition-colors flex items-center gap-1 uppercase tracking-widest disabled:opacity-50"
             >
-              <LogOut size={10} /> Salir
+              {loading ? <Loader2 size={10} className="animate-spin" /> : <LogOut size={10} />} SALIR
             </button>
           </div>
         </div>
       ) : (
         <button 
           onClick={handleLogin}
-          className="flex items-center gap-3 bg-white text-gray-900 px-5 py-2.5 rounded-2xl font-black text-[11px] tracking-widest shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] hover:shadow-none hover:bg-gray-50 transition-all active:scale-95 border border-gray-200 uppercase"
+          disabled={loading}
+          className="flex items-center gap-3 bg-white text-gray-900 px-5 py-2.5 rounded-2xl font-black text-[11px] tracking-widest shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] hover:shadow-none hover:bg-gray-50 transition-all active:scale-95 border border-gray-200 uppercase disabled:opacity-70"
         >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
-          ACCEDER CON GOOGLE
+          {loading ? (
+            <Loader2 size={16} className="animate-spin text-blue-600" />
+          ) : (
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
+          )}
+          {loading ? "CONECTANDO..." : "ACCEDER CON GOOGLE"}
         </button>
       )}
     </div>
