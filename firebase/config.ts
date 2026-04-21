@@ -3,12 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBNfOqPVjxnCwR35fGGWrn36p8HHw-ZePM",
+  apiKey: "AIzaSyBvNiCeB2K1Nzva6HZQcWRlcjoXLoddqYw",
   authDomain: "agenda-virtual-48e4e.firebaseapp.com",
   projectId: "agenda-virtual-48e4e",
   storageBucket: "agenda-virtual-48e4e.firebasestorage.app",
   messagingSenderId: "937291727034",
-  appId: "1:937291727034:web:bad8557b864e3de6190283"
+  appId: "1:937291727034:web:2a1dbdb0f2bba8cb190283",
+  measurementId: "G-YX9QXM1KP9"
 };
 
 const app = initializeApp(firebaseConfig);
