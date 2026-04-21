@@ -19,36 +19,32 @@ export const nlpParser = (input: string) => {
     return d.toISOString().split('T')[0];
   };
 
-  const EXCLUDE_WORDS = ["tengo", "clase", "materia", "presencial", "virtual"];
-  const DAYS_LIST = ["lunes", "martes", "miercoles", "miércoles", "jueves", "viernes", "sabado", "sábados", "sabados", "sábado", "domingo", "s"];
+  const EXCLUDE_WORDS = ["tengo", "clase", "materia", "presencial", "virtual", "de", "a", "los", "las", "el", "en", "para"];
+  const DAYS_LIST = ["lunes", "martes", "miercoles", "miércoles", "jueves", "viernes", "sabados", "sabado", "sábado", "domingo", "s"];
   
   const sanitizeName = (name: string) => {
     let clean = name.toLowerCase();
     
-    // 1. Eliminar rangos horarios (de 2 a 6) y preposiciones asociadas
+    // 1. Eliminar Rangos Horarios y Referencias de Tiempo (Ultra-Clean)
     clean = clean.replace(/(?:de\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?\s*(?:a|y|hasta)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?/gi, '');
-    
-    // 2. Eliminar horas sueltas y referencias am/pm
     clean = clean.replace(/\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)/gi, '');
     clean = clean.replace(/\b(?:am|pm|a\.m\.|p\.m\.)\b/gi, '');
-    
-    // 3. Eliminar números aislados (que podrían ser horas remanentes)
     clean = clean.replace(/\b\d{1,2}\b/g, '');
 
-    // 4. Eliminar Días y abreviaciones (incluyendo 's')
+    // 2. Eliminar Días y Residuos (incluyendo 's' huérfana)
     DAYS_LIST.forEach(day => {
       const regex = new RegExp(`\\b${day}\\b`, 'gi');
       clean = clean.replace(regex, '');
     });
 
-    // 5. Eliminar palabras de ruido
+    // 3. Eliminar Palabras de Ruido y Conexión
     EXCLUDE_WORDS.forEach(word => {
       const regex = new RegExp(`\\b${word}\\b`, 'gi');
       clean = clean.replace(regex, '');
     });
 
-    // 6. Limpieza de preposiciones residuales 'de'/'a' que suelen quedar
-    clean = clean.replace(/\b(?:de|a|en|el|los|las)\b/gi, '');
+    // 4. Limpieza final: Quitar letras sueltas residuales al final (como la 's' de sabados)
+    clean = clean.trim().replace(/\s+([a-z])\b/gi, '').replace(/\b([a-z])\s+/gi, '');
     
     const result = clean.trim().replace(/\s+/g, ' ');
     return result.charAt(0).toUpperCase() + result.slice(1);
@@ -100,10 +96,13 @@ export const nlpParser = (input: string) => {
     if (rangeMatch) {
       let h1 = parseInt(rangeMatch[1]);
       let h2 = parseInt(rangeMatch[2]);
+      
+      // Aplicar +12 a ambos valores si se detecta PM en la frase
       if (isPM) {
         if (h1 < 12) h1 += 12;
         if (h2 < 12) h2 += 12;
       }
+      
       horaInicio = `${h1.toString().padStart(2, '0')}:${rangeMatch[1].includes(':') ? rangeMatch[1].split(':')[1] : '00'}`;
       horaFin = `${h2.toString().padStart(2, '0')}:${rangeMatch[2].includes(':') ? rangeMatch[2].split(':')[1] : '00'}`;
     } else {
