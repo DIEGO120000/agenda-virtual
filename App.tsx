@@ -11,7 +11,7 @@ import { PlusCircle, Calendar, ClipboardList, Moon, Sun, LogOut, Loader2 } from 
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './firebase/config';
 import { logout } from './services/auth';
-import { saveData, getMyData } from './services/db';
+import { saveData, subscribeToMyData, deleteMyData, updateMyData } from './services/db';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -36,28 +36,20 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Cargar datos de Firestore al autenticar
+  // Suscripciones en tiempo real a Firestore
   useEffect(() => {
     if (user) {
-      const fetchData = async () => {
-        try {
-          const [tareas, notas, pasatiempos, horario] = await Promise.all([
-            getMyData('tareas'),
-            getMyData('notas'),
-            getMyData('pasatiempos'),
-            getMyData('horario')
-          ]);
-          setState({
-            tareas: tareas as Tarea[],
-            notas: notas as Nota[],
-            pasatiempos: pasatiempos as Pasatiempo[],
-            horario: horario as EventoHorario[]
-          });
-        } catch (error) {
-          console.error("Error cargando datos:", error);
-        }
+      const unsubTareas = subscribeToMyData('tareas', (data) => setState(p => ({ ...p, tareas: data as Tarea[] })));
+      const unsubNotas = subscribeToMyData('notas', (data) => setState(p => ({ ...p, notas: data as Nota[] })));
+      const unsubPasatiempos = subscribeToMyData('pasatiempos', (data) => setState(p => ({ ...p, pasatiempos: data as Pasatiempo[] })));
+      const unsubHorario = subscribeToMyData('horario', (data) => setState(p => ({ ...p, horario: data as EventoHorario[] })));
+
+      return () => {
+        unsubTareas();
+        unsubNotas();
+        unsubPasatiempos();
+        unsubHorario();
       };
-      fetchData();
     }
   }, [user]);
 
@@ -79,11 +71,8 @@ const App: React.FC = () => {
       estado: EstadoTarea.PENDIENTE,
     };
     try {
-      const id = await saveData('tareas', nuevaTarea);
-      setState(p => ({ ...p, tareas: [...p.tareas, { ...nuevaTarea, id }] }));
-    } catch (err) {
-      console.error(err);
-    }
+      await saveData('tareas', nuevaTarea);
+    } catch (err) { console.error("Error al guardar tarea:", err); }
   };
 
   const bulkAddTasks = (nuevas: any[]) => {
@@ -91,33 +80,33 @@ const App: React.FC = () => {
   };
 
   const removeTasksByName = (nombres: string[]) => {
-    setState(prev => ({ 
-      ...prev, 
-      tareas: prev.tareas.filter(t => !nombres.some(n => t.nombre.toLowerCase().includes(n.toLowerCase()))) 
-    }));
+    state.tareas.forEach(t => {
+      if (nombres.some(n => t.nombre.toLowerCase().includes(n.toLowerCase()))) {
+        deleteMyData('tareas', t.id);
+      }
+    });
   };
 
   const updateHorario = async (eventos: any[]) => {
     for (const e of eventos) {
       try {
-        const id = await saveData('horario', e);
-        setState(prev => ({ ...prev, horario: [...prev.horario, { ...e, id }] }));
+        await saveData('horario', e);
       } catch (err) { console.error(err); }
     }
   };
 
   const removeHorarioByCriteria = (criterios: string[]) => {
-    setState(prev => ({
-      ...prev,
-      horario: prev.horario.filter(e => !criterios.some(c => e.actividad.toLowerCase().includes(c.toLowerCase())))
-    }));
+    state.horario.forEach(e => {
+      if (criterios.some(c => e.actividad.toLowerCase().includes(c.toLowerCase()))) {
+        deleteMyData('horario', e.id);
+      }
+    });
   };
 
   const addNota = async (contenido: string) => {
     const nuevaNota = { contenido, timestamp: new Date().toISOString() };
     try {
-      const id = await saveData('notas', nuevaNota);
-      setState(p => ({ ...p, notas: [...p.notas, { ...nuevaNota, id }] }));
+      await saveData('notas', nuevaNota);
     } catch (err) { console.error(err); }
   };
 
@@ -126,17 +115,17 @@ const App: React.FC = () => {
   };
 
   const removeNotasByCriteria = (criterios: string[]) => {
-    setState(prev => ({
-      ...prev,
-      notas: prev.notas.filter(n => !criterios.some(c => n.contenido.toLowerCase().includes(c.toLowerCase())))
-    }));
+    state.notas.forEach(n => {
+      if (criterios.some(c => n.contenido.toLowerCase().includes(c.toLowerCase()))) {
+        deleteMyData('notas', n.id);
+      }
+    });
   };
 
   const addPasatiempo = async (nombre: string) => {
     const nuevoP = { nombre, completado: false };
     try {
-      const id = await saveData('pasatiempos', nuevoP);
-      setState(p => ({ ...p, pasatiempos: [...p.pasatiempos, { ...nuevoP, id }] }));
+      await saveData('pasatiempos', nuevoP);
     } catch (err) { console.error(err); }
   };
 
@@ -145,10 +134,11 @@ const App: React.FC = () => {
   };
 
   const removePasatiemposByCriteria = (criterios: string[]) => {
-    setState(prev => ({
-      ...prev,
-      pasatiempos: prev.pasatiempos.filter(p => !criterios.some(c => p.nombre.toLowerCase().includes(c.toLowerCase())))
-    }));
+    state.pasatiempos.forEach(p => {
+      if (criterios.some(c => p.nombre.toLowerCase().includes(c.toLowerCase()))) {
+        deleteMyData('pasatiempos', p.id);
+      }
+    });
   };
 
   if (authLoading) {
@@ -197,8 +187,8 @@ const App: React.FC = () => {
           <AgendaTable 
             tareas={state.tareas} 
             now={currentTime}
-            updateTask={(id, upds) => setState(p => ({ ...p, tareas: p.tareas.map(t => t.id === id ? {...t, ...upds} : t) }))}
-            removeTask={(id) => setState(p => ({ ...p, tareas: p.tareas.filter(t => t.id !== id) }))}
+            updateTask={(id, upds) => updateMyData('tareas', id, upds)}
+            removeTask={(id) => deleteMyData('tareas', id)}
           />
         </section>
 
@@ -206,8 +196,8 @@ const App: React.FC = () => {
           <div className="lg:col-span-2">
             <ScheduleSection 
               horario={state.horario} 
-              onRemove={(id) => setState(p => ({ ...p, horario: p.horario.filter(e => e.id !== id) }))}
-              onClear={() => setState(p => ({ ...p, horario: [] }))}
+              onRemove={(id) => deleteMyData('horario', id)}
+              onClear={() => state.horario.forEach(e => deleteMyData('horario', e.id))}
             />
           </div>
           <div className="space-y-8">
@@ -215,10 +205,13 @@ const App: React.FC = () => {
               notas={state.notas} 
               pasatiempos={state.pasatiempos}
               addNota={addNota}
-              removeNota={(id) => setState(p => ({ ...p, notas: p.notas.filter(n => n.id !== id) }))}
+              removeNota={(id) => deleteMyData('notas', id)}
               addPasatiempo={addPasatiempo}
-              togglePasatiempo={(id) => setState(p => ({ ...p, pasatiempos: p.pasatiempos.map(p => p.id === id ? {...p, completado: !p.completado} : p) }))}
-              removePasatiempo={(id) => setState(p => ({ ...p, pasatiempos: p.pasatiempos.filter(p => p.id !== id) }))}
+              togglePasatiempo={(id) => {
+                const p = state.pasatiempos.find(x => x.id === id);
+                if (p) updateMyData('pasatiempos', id, { completado: !p.completado });
+              }}
+              removePasatiempo={(id) => deleteMyData('pasatiempos', id)}
             />
           </div>
         </div>
@@ -234,6 +227,7 @@ const App: React.FC = () => {
         onAIRemoveNotas={removeNotasByCriteria}
         onAIAddPasatiempos={bulkAddPasatiempos}
         onAIRemovePasatiempos={removePasatiemposByCriteria}
+        onAIAddCalificacion={(m, o, t) => saveData('calificaciones', { materia: m, obtenido: o, total: t })}
       />
 
       {isTaskFormOpen && (
