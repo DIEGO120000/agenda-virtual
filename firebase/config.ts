@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBvNiCeB2K1Nzva6HZQcWRlcjoXLoddqYw",
+  apiKey: "AIzaSyBNfOqPVjxnCwR35fGGWrn36p8HHw-ZePM",
   authDomain: "agenda-virtual-48e4e.firebaseapp.com",
   projectId: "agenda-virtual-48e4e",
   storageBucket: "agenda-virtual-48e4e.firebasestorage.app",
