@@ -1,188 +1,93 @@
-
 import { EstadoTarea, PrioridadTarea } from '../types';
 
-export const nlpParser = (input: string) => {
+export interface SemanticAction {
+  type: 'HORARIO' | 'TAREA' | 'NOTA';
+  data: any;
+}
+
+export const semanticClassifier = (input: string): SemanticAction => {
   const text = input.toLowerCase();
   const now = new Date();
-  
-  // Helper to resolve dates
-  const resolveDate = (str: string) => {
-    const d = new Date();
-    if (str.includes('mañana')) d.setDate(d.getDate() + 1);
-    if (str.includes('lunes')) d.setDate(d.getDate() + ((1 + 7 - d.getDay()) % 7 || 7));
-    if (str.includes('martes')) d.setDate(d.getDate() + ((2 + 7 - d.getDay()) % 7 || 7));
-    if (str.includes('miercoles') || str.includes('miércoles')) d.setDate(d.getDate() + ((3 + 7 - d.getDay()) % 7 || 7));
-    if (str.includes('jueves')) d.setDate(d.getDate() + ((4 + 7 - d.getDay()) % 7 || 7));
-    if (str.includes('viernes')) d.setDate(d.getDate() + ((5 + 7 - d.getDay()) % 7 || 7));
-    if (str.includes('sabado') || str.includes('sábado')) d.setDate(d.getDate() + ((6 + 7 - d.getDay()) % 7 || 7));
-    if (str.includes('domingo')) d.setDate(d.getDate() + ((0 + 7 - d.getDay()) % 7 || 7));
-    return d.toISOString().split('T')[0];
-  };
 
-  const EXCLUDE_WORDS = ["tengo", "clase", "materia", "presencial", "virtual", "de", "a", "los", "las", "el", "en", "para"];
-  const DAYS_LIST = ["lunes", "martes", "miercoles", "miércoles", "jueves", "viernes", "sabados", "sabado", "sábado", "domingo", "s"];
-  
-  const sanitizeName = (name: string) => {
-    let clean = name.toLowerCase();
+  // --- REGLA A: MATERIAS (HORARIO) ---
+  // Condición: Días + Rangos de hora + Modalidad
+  const diasRegex = /\b(lunes|martes|miercoles|miércoles|jueves|viernes|sabado|sábado|domingo)\b/i;
+  const horasRegex = /(\d{1,2}(?::\d{2})?\s*(am|pm|a\.m\.|p\.m\.?))\s*(?:a|y|hasta)\s*(\d{1,2}(?::\d{2})?\s*(am|pm|a\.m\.|p\.m\.?))/i;
+  const modalidadRegex = /\b(presencial|virtual|semi|semipresencial)\b/i;
+
+  if (diasRegex.test(text) && horasRegex.test(text)) {
+    const diaMatch = text.match(diasRegex);
+    const horaMatch = text.match(horasRegex);
+    const modMatch = text.match(modalidadRegex);
+
+    // Extraer nombre de materia (eliminar ruidos)
+    let materia = text
+      .replace(diasRegex, '')
+      .replace(horasRegex, '')
+      .replace(modalidadRegex, '')
+      .replace(/\b(tengo|clase|materia|de|a|las|los|el)\b/gi, '')
+      .trim();
     
-    // 1. ELIMINACIÓN RADICAL DE RANGOS Y TIEMPO
-    clean = clean.replace(/(?:de\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?\s*(?:a|y|hasta)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?/gi, '');
-    clean = clean.replace(/\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)/gi, '');
-    clean = clean.replace(/\b(?:am|pm|a\.m\.|p\.m\.)\b/gi, '');
-    clean = clean.replace(/\b\d{1,2}\b/g, '');
+    materia = materia ? materia.toUpperCase() : "MATERIA DESCONOCIDA";
 
-    // 2. ELIMINACIÓN DE DÍAS Y RESIDUOS (incluye 's' huérfana)
-    DAYS_LIST.forEach(day => {
-      const regex = new RegExp(`\\b${day}\\b`, 'gi');
-      clean = clean.replace(regex, '');
-    });
+    return {
+      type: 'HORARIO',
+      data: {
+        actividad: materia,
+        dia: diaMatch![0].charAt(0).toUpperCase() + diaMatch![0].slice(1).replace('miércoles', 'Miercoles'),
+        hora: horaMatch![1].replace(/\s/g, '').toLowerCase(),
+        horaFin: horaMatch![3].replace(/\s/g, '').toLowerCase(),
+        modalidad: modMatch ? modMatch[0].charAt(0).toUpperCase() + modMatch[0].slice(1) : "Presencial",
+        tipo: 'clase'
+      }
+    };
+  }
 
-    // 3. ELIMINACIÓN DE PALABRAS DE ACCIÓN Y CONECTORES
-    EXCLUDE_WORDS.forEach(word => {
-      const regex = new RegExp(`\\b${word}\\b`, 'gi');
-      clean = clean.replace(regex, '');
-    });
+  // --- REGLA B: TAREAS (SEGUIMIENTO DINÁMICO) ---
+  // Condición: Acción obligatoria + Tiempo/Fecha límite
+  const tiempoLimiteRegex = /\b(mañana|hoy|a las \d{1,2}(?::\d{2})?\s*(am|pm|a\.m\.|p\.m\.?)|el lunes|el martes|el miércoles|el jueves|el viernes)\b/i;
+  const obligacionRegex = /\b(tengo que|hay que|debo|entregar|hacer|estudiar|subir|examen|parcial|proyecto)\b/i;
 
-    // 4. LIMPIEZA DE PUNTOS Y CARACTERES RESIDUALES
-    clean = clean.replace(/\./g, '');
+  if (obligacionRegex.test(text) && tiempoLimiteRegex.test(text)) {
+    const tiempoMatch = text.match(tiempoLimiteRegex);
     
-    // 5. LIMPIEZA FINAL DE ESPACIOS Y LETRAS SUELTAS
-    clean = clean.trim().replace(/\s+([a-z])\b/gi, '').replace(/\b([a-z])\s+/gi, '');
+    // Calcular fecha de culminación
+    const fechaCulminacion = new Date();
+    if (text.includes('mañana')) fechaCulminacion.setDate(fechaCulminacion.getDate() + 1);
     
-    const result = clean.trim().replace(/\s+/g, ' ');
-    if (!result) return "ACTIVIDAD";
-    return result.charAt(0).toUpperCase() + result.slice(1).toLowerCase();
-  };
-
-  // CLASIFICACIÓN Y EXTRACCIÓN
-  
-  // 1. GESTIONAR AGENDA (TAREAS)
-  const academicSubjects = ['sociales', 'matematicas', 'matemáticas', 'programacion', 'programación', 'calculo', 'cálculo', 'fisica', 'física', 'quimica', 'química', 'historia', 'ingles', 'inglés', 'español', 'biologia', 'biología', 'orientacion', 'orientación'];
-  const agendaKeywords = ['examen', 'parcial', 'tarea', 'entrega', 'proyecto', 'estudiar', 'subir', 'foro', 'práctica', 'practica', 'tengo que', 'hay que', 'debo'];
-  
-  if (agendaKeywords.some(k => text.includes(k)) || academicSubjects.some(s => text.includes(s))) {
-    const fecha = resolveDate(text);
-    const isHigh = text.includes('final') || text.includes('parcial') || text.includes('60%');
+    // Extraer nombre de tarea
+    let tareaNombre = text
+      .replace(tiempoLimiteRegex, '')
+      .replace(obligacionRegex, '')
+      .replace(/\b(una|de|la|el|que|un)\b/gi, '')
+      .trim();
     
-    const priorityMatch = text.match(/(?:prioridad|valor|criticidad)\s*(\d{1,2})/i);
-    let criticidad = priorityMatch ? parseInt(priorityMatch[1]) : (isHigh ? 10 : 5);
-    let prioridad = isHigh || criticidad > 7 ? PrioridadTarea.ALTA : PrioridadTarea.MEDIA;
+    tareaNombre = tareaNombre ? tareaNombre.charAt(0).toUpperCase() + tareaNombre.slice(1) : "Nueva Tarea";
 
-    let finalName = "";
-    const foundSubject = academicSubjects.find(s => text.includes(s));
+    // Calcular criticidad basada en proximidad (si es hoy/mañana es alta)
+    const criticidad = text.includes('hoy') ? 10 : (text.includes('mañana') ? 8 : 5);
 
-    if (foundSubject) {
-      // Caso Académico: Solo el nombre de la materia
-      finalName = foundSubject.charAt(0).toUpperCase() + foundSubject.slice(1);
-    } else {
-      // Caso General: Predicado limpio
-      let cleanName = text;
-      // Eliminar ruidos de inicio y tiempo
-      cleanName = cleanName.replace(/^(?:mañana|hoy|tengo que|hay que|debo|tengo una tarea de|tengo que|tengo|una|de|que|la|el|para|un|el|la)\s+/gi, '');
-      cleanName = cleanName.replace(/(?:para\s+)?(?:mañana|hoy|el\s+\w+)/gi, '');
-      cleanName = cleanName.replace(/\b(?:prioridad|valor|criticidad)\s*\d{1,2}\b/gi, '');
-      
-      // Conservar la acción y posible hora/detalle si no es materia
-      finalName = cleanName.trim().charAt(0).toUpperCase() + cleanName.trim().slice(1);
+    return {
+      type: 'TAREA',
+      data: {
+        nombre: tareaNombre,
+        ingreso: new Date().toISOString(),
+        recomendado: new Date().toISOString().split('T')[0],
+        culminacion: fechaCulminacion.toISOString().split('T')[0],
+        criticidad: criticidad,
+        estado: EstadoTarea.PENDIENTE,
+        prioridad: criticidad > 7 ? PrioridadTarea.ALTA : PrioridadTarea.MEDIA
+      }
+    };
+  }
+
+  // --- REGLA C: NOTAS (DEFAULT) ---
+  // Afirmaciones genéricas o acciones sin tiempo
+  return {
+    type: 'NOTA',
+    data: {
+      contenido: input,
+      timestamp: new Date().toISOString()
     }
-    
-    return {
-      name: 'gestionar_agenda',
-      args: {
-        tareas: [{
-          nombre: finalName,
-          recomendado: now.toISOString().split('T')[0],
-          culminacion: fecha,
-          criticidad: criticidad,
-          prioridad: prioridad
-        }]
-      }
-    };
-  }
-
-  // 2. GESTIONAR HORARIO
-  const dias = ['lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'sábado', 'domingo'];
-  const TIME_RANGE_REGEX = /(?:de\s+)?(\d{1,2}(?::\d{2})?)\s*(?:am|pm|a\.m\.|p\.m\.)?\s*(?:a|y|hasta)\s+(\d{1,2}(?::\d{2})?)\s*(am|pm|a\.m\.|p\.m\.)?/i;
-  const SINGLE_TIME_REGEX = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?/i;
-
-  if (dias.some(d => text.includes(d)) || text.match(TIME_RANGE_REGEX) || text.match(SINGLE_TIME_REGEX)) {
-    const rawDia = dias.find(d => text.includes(d)) || 'Lunes';
-    const diaMatch = (rawDia.toLowerCase().includes('sabado') || rawDia.toLowerCase().includes('sábado')) ? 'Sábado' : rawDia.charAt(0).toUpperCase() + rawDia.slice(1).replace('miércoles', 'Miercoles');
-    
-    const isPM = text.includes('pm') || text.includes('p.m.');
-    const rangeMatch = text.match(TIME_RANGE_REGEX);
-    
-    let horaInicio = "08:00";
-    let horaFin = "10:00";
-
-    if (rangeMatch && rangeMatch[1] && rangeMatch[2]) {
-      let h1 = parseInt(rangeMatch[1]);
-      let h2 = parseInt(rangeMatch[2]);
-      
-      // MOTOR 24H: SUMA DUAL SI ES PM
-      if (isPM) {
-        if (h1 < 12) h1 += 12;
-        if (h2 < 12) h2 += 12;
-      }
-      
-      horaInicio = `${h1.toString().padStart(2, '0')}:${rangeMatch[1].includes(':') ? rangeMatch[1].split(':')[1] : '00'}`;
-      horaFin = `${h2.toString().padStart(2, '0')}:${rangeMatch[2].includes(':') ? rangeMatch[2].split(':')[1] : '00'}`;
-    } else {
-      const singleMatch = text.match(SINGLE_TIME_REGEX);
-      if (singleMatch) {
-        let h = parseInt(singleMatch[1]);
-        if (isPM && h < 12) h += 12;
-        const mins = singleMatch[2] || '00';
-        horaInicio = `${h.toString().padStart(2, '0')}:${mins}`;
-        horaFin = `${((h + 2) % 24).toString().padStart(2, '0')}:${mins}`;
-      }
-    }
-    
-    const actividad = sanitizeName(input);
-
-    return {
-      name: 'gestionar_horario',
-      args: {
-        eventos: [{
-          dia: diaMatch,
-          hora: horaInicio,
-          horaFin: horaFin,
-          actividad: actividad.toUpperCase(),
-          tipo: 'clase',
-          modalidad: text.includes('virtual') ? 'Virtual' : 'Presencial'
-        }]
-      }
-    };
-  }
-
-  // 3. CALIFICACIONES (ACUMULADO 60/40)
-  const califMatch = text.match(/(?:saqué|saque|tengo|puntos|nota)\s+(\d+)\s+(?:de|sobre|\/)\s+(\d+)/i);
-  if (califMatch) {
-    const obtenido = parseInt(califMatch[1]);
-    const total = parseInt(califMatch[2]);
-    const materiaMatch = text.match(/(?:en|de)\s+([a-z0-9\s]+)/i);
-    const materia = materiaMatch ? materiaMatch[1].trim() : "General";
-    
-    return {
-      name: 'gestionar_calificacion',
-      args: {
-        materia: materia.toUpperCase(),
-        obtenido,
-        total
-      }
-    };
-  }
-
-  // 4. NOTAS / DEUDAS
-  const notesKeywords = ['pesos', 'rd$', 'debe', 'prestó', 'presto', 'pago', 'pagar', 'recordar'];
-  if (notesKeywords.some(k => text.includes(k)) || true) { // Fallback to notes
-    return {
-      name: 'gestionar_notes',
-      args: {
-        notes: [input]
-      }
-    };
-  }
-
-  return null;
+  };
 };
