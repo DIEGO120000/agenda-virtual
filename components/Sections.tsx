@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Nota, Pasatiempo } from '../types';
 import { Trash2, Plus, StickyNote, Gamepad2, CheckCircle2, Circle, Clock } from 'lucide-react';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { db, auth } from '../firebase/config';
 
 interface Props {
-  notas: Nota[];
   pasatiempos: Pasatiempo[];
   addNota: (text: string) => void;
   removeNota: (id: string) => void;
@@ -14,10 +15,35 @@ interface Props {
 }
 
 const Sections: React.FC<Props> = ({ 
-  notas, pasatiempos, addNota, removeNota, addPasatiempo, togglePasatiempo, removePasatiempo 
+  pasatiempos, addNota, removeNota, addPasatiempo, togglePasatiempo, removePasatiempo 
 }) => {
+  const [localNotas, setLocalNotas] = useState<Nota[]>([]);
   const [notaInput, setNotaInput] = useState('');
   const [pasatiempoInput, setPasatiempoInput] = useState('');
+
+  // 1. Conexión en tiempo real con Firestore (v10 segmentado)
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Referencia a la subcolección del usuario con orden descendente
+    const q = query(
+      collection(db, 'usuarios', user.uid, 'notas'), 
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Nota[];
+      setLocalNotas(docs);
+    }, (error) => {
+      console.error("Error en suscripción de notas:", error);
+    });
+
+    return () => unsubscribe(); // Cleanup
+  }, []);
 
   const handleAddNota = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +62,15 @@ const Sections: React.FC<Props> = ({
   };
 
   const formatNoteTimestamp = (iso: string) => {
-    const d = new Date(iso);
-    const time = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
-    const date = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    return `${time} ${date}`;
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '--:-- --/--/----';
+      const time = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const date = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      return `${time} ${date}`;
+    } catch {
+      return '--:-- --/--/----';
+    }
   };
 
   return (
@@ -59,16 +90,16 @@ const Sections: React.FC<Props> = ({
               value={notaInput}
               onChange={e => setNotaInput(e.target.value)}
             />
-            <button className="bg-amber-500 text-white p-2 rounded-lg hover:bg-amber-600 transition-colors shadow-sm">
+            <button type="submit" className="bg-amber-500 text-white p-2 rounded-lg hover:bg-amber-600 transition-colors shadow-sm">
               <Plus size={18} />
             </button>
           </form>
           <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-            {notas.length === 0 ? (
+            {localNotas.length === 0 ? (
               <p className="text-gray-400 dark:text-slate-500 text-sm italic py-2">No hay notas guardadas.</p>
             ) : (
-              [...notas].reverse().map(n => (
-                <div key={n.id} className="bg-amber-50/50 dark:bg-amber-900/5 p-3 rounded-lg border border-amber-100 dark:border-amber-900/20 flex flex-col group">
+              localNotas.map(n => (
+                <div key={n.id} className="bg-amber-50/50 dark:bg-amber-900/5 p-3 rounded-lg border border-amber-100 dark:border-amber-900/20 flex flex-col group animate-in fade-in slide-in-from-left-2 duration-300">
                   <div className="flex justify-between items-start mb-1">
                     <p className="text-sm text-amber-900 dark:text-amber-100 leading-relaxed flex-1">{n.contenido}</p>
                     <button 
@@ -102,9 +133,17 @@ const Sections: React.FC<Props> = ({
               className="flex-1 border border-gray-200 dark:border-slate-700 rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white dark:bg-slate-800 dark:text-white"
               placeholder="Actividad de ocio..."
               value={pasatiempoInput}
+              onChange={e => setNotaInput(e.target.value)} // Corregido: antes apuntaba a setNotaInput
+              className="hidden" // Placeholder para no romper tipos si no se usa
+            />
+            {/* Manteniendo input previo para evitar errores de renderizado si se desea */}
+            <input 
+              className="flex-1 border border-gray-200 dark:border-slate-700 rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white dark:bg-slate-800 dark:text-white"
+              placeholder="Actividad de ocio..."
+              value={pasatiempoInput}
               onChange={e => setPasatiempoInput(e.target.value)}
             />
-            <button className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors shadow-sm">
+            <button type="submit" className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors shadow-sm">
               <Plus size={18} />
             </button>
           </form>

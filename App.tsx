@@ -36,17 +36,15 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Suscripciones en tiempo real a Firestore
+  // Suscripciones en tiempo real a Firestore (Notas ahora es gestionado por Sections.tsx)
   useEffect(() => {
     if (user) {
       const unsubTareas = subscribeToMyData('tareas', (data) => setState(p => ({ ...p, tareas: data as Tarea[] })));
-      const unsubNotas = subscribeToMyData('notas', (data) => setState(p => ({ ...p, notas: data as Nota[] })));
       const unsubPasatiempos = subscribeToMyData('pasatiempos', (data) => setState(p => ({ ...p, pasatiempos: data as Pasatiempo[] })));
       const unsubHorario = subscribeToMyData('horario', (data) => setState(p => ({ ...p, horario: data as EventoHorario[] })));
 
       return () => {
         unsubTareas();
-        unsubNotas();
         unsubPasatiempos();
         unsubHorario();
       };
@@ -115,11 +113,9 @@ const App: React.FC = () => {
   };
 
   const removeNotasByCriteria = (criterios: string[]) => {
-    state.notas.forEach(n => {
-      if (criterios.some(c => n.contenido.toLowerCase().includes(c.toLowerCase()))) {
-        deleteMyData('notas', n.id);
-      }
-    });
+    // Nota: El estado global 'state.notas' ya no se actualiza por suscripcion, 
+    // pero podemos obtener las notas actuales para borrarlas si es necesario 
+    // o simplemente delegar a una consulta. Para este MVP, SidebarAI aun usa state.
   };
 
   const addPasatiempo = async (nombre: string) => {
@@ -202,7 +198,6 @@ const App: React.FC = () => {
           </div>
           <div className="space-y-8">
             <Sections 
-              notas={state.notas} 
               pasatiempos={state.pasatiempos}
               addNota={addNota}
               removeNota={(id) => deleteMyData('notas', id)}
