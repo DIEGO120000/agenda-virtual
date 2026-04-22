@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppState } from '../types';
-import { analizarComando } from '../services/groqService';
+import { analizarComando, procesarConsulta } from '../services/groqService';
 import { saveData } from '../services/db';
 import { EstadoTarea, PrioridadTarea } from '../types';
 import { Send, Mic, MicOff, Loader2, ChevronUp, ChevronDown, Terminal } from 'lucide-react';
@@ -42,15 +42,18 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
       let aiText = "";
 
       switch (resultado.tipo) {
+        case 'consulta':
+          aiText = await procesarConsulta(resultado.intencion, state.tareas);
+          break;
         case 'horario':
           await saveData('horario', {
             actividad: resultado.materia?.toUpperCase() || "MATERIA",
             dia: resultado.dia,
-            hora: resultado.horario,
+            hora: resultado.hora,
             modalidad: resultado.modalidad || "Presencial",
             tipo: 'clase'
           });
-          aiText = `MATERIA REGISTRADA: ${resultado.materia} // DÍA: ${resultado.dia} // HORA: ${resultado.horario}.`;
+          aiText = `MATERIA REGISTRADA: ${resultado.materia} // DÍA: ${resultado.dia} // HORA: ${resultado.hora}.`;
           break;
         case 'tarea':
           const criticidadMap: Record<string, number> = { 'Alta': 10, 'Media': 7, 'Baja': 4 };
@@ -78,7 +81,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
           aiText = "COMANDO NO RECONOCIDO POR EL MOTOR SEMÁNTICO.";
       }
 
-      setMessages(prev => [...prev, { role: 'ai', text: `COMANDO EJECUTADO // ${aiText}` }]);
+      setMessages(prev => [...prev, { role: 'ai', text: resultado.tipo === 'consulta' ? aiText : `COMANDO EJECUTADO // ${aiText}` }]);
     } catch (error: any) {
       setMessages(prev => [...prev, { role: 'error', text: `GROQ_ERR: FALLA EN LA INFERENCIA (${error.message})` }]);
     } finally {
