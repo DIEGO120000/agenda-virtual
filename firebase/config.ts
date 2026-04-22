@@ -8,8 +8,7 @@ const firebaseConfig = {
   projectId: "agenda-virtual-48e4e",
   storageBucket: "agenda-virtual-48e4e.firebasestorage.app",
   messagingSenderId: "937291727034",
-  appId: "1:937291727034:web:2a1dbdb0f2bba8cb190283",
-  measurementId: "G-YX9QXM1KP9"
+  appId: "1:937291727034:web:bad8557b864e3de6190283"
 };
 
 export const app = initializeApp(firebaseConfig);
