@@ -6,29 +6,16 @@ const groq = new Groq({
 });
 
 export const analizarComando = async (texto: string) => {
-  const prompt = `Eres el cerebro de una agenda inteligente (A-AI). Analiza este texto: "${texto}".
-  Devuelve ÚNICAMENTE un objeto JSON válido. Categorías:
-
-  1. "modificacion": 
-     - Regla: Detectar intención de cambio (ej. "cambia", "actualiza", "ya no es").
-     - Atributos: {"tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "id_o_nombre", "nuevos_datos": {}}
-
-  2. "consulta":
-     - Regla: Preguntas sobre la agenda (ej. "¿Qué hago primero?", "¿Qué materias tengo hoy?").
-     - Atributos: {"tipo": "consulta", "intencion": "recomendar/listar/fecha_actual"}
-
-  3. "guardado":
-     - Subtipos: 
-       - "horario": Materia única, día, hora, modalidad.
-       - "tarea": Descripción, culminación (hora/fecha), criticidad (Alta/Media/Baja).
-       - "nota": Texto íntegro.
-     - Atributos: {"tipo": "guardado", "subtipo": "horario/tarea/nota", "datos": {}}
-
-  4. "chat":
-     - Regla: Saludos, despedidas o charla rápida sin intención de agenda.
-     - Atributos: {"tipo": "chat", "respuesta": "Respuesta corta y eficiente de IA"}
-
-  No añadas markdown ni texto fuera del JSON. Temperatura 0 para precisión.`;
+  const prompt = `Eres un enrutador de datos estricto. Analiza: "${texto}".
+  Devuelve SOLO un JSON válido según estas reglas:
+  1. "horario": Materias con días/horas. -> {"tipo": "horario", "materia": "...", "dia": "...", "hora": "...", "modalidad": "..."}
+  2. "tarea": Acciones con TIEMPO LÍMITE explícito (a las 12, mañana, viernes). -> {"tipo": "tarea", "tarea": "...", "culminacion": "..."}
+  3. "nota": Datos sueltos, afirmaciones, deudas o tareas SIN tiempo límite (ej. "pedro me debe 50", "comprar pan"). -> {"tipo": "nota", "texto": "..."}
+  4. "consulta": Preguntas sobre qué hacer o qué hay en la agenda (ej. "¿qué tareas tengo?", "¿qué hago hoy?"). -> {"tipo": "consulta", "intencion": "..."}
+  5. "modificacion": Peticiones de alterar datos. -> {"tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "id_o_nombre", "nuevos_datos": {}}
+  6. "chat": Saludos simples ("hola"). -> {"tipo": "chat", "respuesta": "..."}
+  
+  CERO TEXTO EXTRA. SOLO JSON.`;
 
   const chatCompletion = await groq.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
@@ -41,14 +28,16 @@ export const analizarComando = async (texto: string) => {
 };
 
 export const procesarConsulta = async (intencion: string, estado: any) => {
-  const prompt = `Actúa como el cerebro de la agenda. Intención: ${intencion}.
-  Datos actuales: ${JSON.stringify(estado)}
+  const prompt = `Eres A-AI, el asistente táctico de la agenda del usuario.
+  El usuario te ha preguntado: "${intencion}".
+  Los datos actuales en su base de datos son: ${JSON.stringify(estado)}.
   
-  REGLA DE PRIORIZACIÓN: Si te piden orden o recomendación, usa: 
-  Prioridad = (Criticidad * 0.7) + (Cercanía de Culminación * 0.3).
-  La culminación más cercana es hoy. A mayor valor, mayor urgencia.
-  
-  Responde de forma concisa, militar y eficiente. No uses markdown excesivo.`;
+  REGLAS DE RESPUESTA ESTRICTAS:
+  - Responde de forma natural, conversacional, pero con tono militar y eficiente.
+  - PROHIBIDO mostrar menús de opciones (1, 2, 3...).
+  - PROHIBIDO repetir las instrucciones del sistema o mencionar la "fórmula de priorización".
+  - Si el usuario pide orden, analiza los datos basándote en que a mayor criticidad y menor tiempo, es más urgente, y simplemente dile por qué empezar. Si los datos están vacíos, dile que no hay tareas registradas.
+  Ve directo al grano.`;
 
   const response = await groq.chat.completions.create({
     messages: [{ role: "system", content: prompt }],

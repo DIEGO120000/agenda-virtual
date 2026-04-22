@@ -65,39 +65,36 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
           aiText = await procesarConsulta(resultado.intencion, state.tareas);
           break;
 
-        case 'guardado': {
-          const { subtipo, datos } = resultado;
-          if (subtipo === 'horario') {
-            await saveData('horario', {
-              actividad: datos.materia?.toUpperCase() || "MATERIA",
-              dia: datos.dia,
-              hora: datos.hora,
-              modalidad: datos.modalidad || "Presencial",
-              tipo: 'clase'
-            });
-            aiText = `MATERIA REGISTRADA: ${datos.materia} // DÍA: ${datos.dia} // HORA: ${datos.hora}.`;
-          } else if (subtipo === 'tarea') {
-            const criticidadMap: Record<string, number> = { 'Alta': 10, 'Media': 7, 'Baja': 4 };
-            const critValue = criticidadMap[datos.criticidad as string] || 5;
-            await saveData('tareas', {
-              nombre: datos.tarea,
-              ingreso: new Date().toISOString(),
-              recomendado: datos.recomendado || new Date().toISOString().split('T')[0],
-              culminacion: datos.culminacion || new Date().toISOString().split('T')[0],
-              criticidad: critValue,
-              estado: EstadoTarea.PENDIENTE,
-              prioridad: critValue > 7 ? PrioridadTarea.ALTA : PrioridadTarea.MEDIA
-            });
-            aiText = `TAREA ASIGNADA: ${datos.tarea} // CULMINACIÓN: ${datos.culminacion} // CRITICIDAD: ${datos.criticidad}.`;
-          } else if (subtipo === 'nota') {
-            await saveData('notas', {
-              contenido: datos.texto || trimmedInput,
-              timestamp: new Date().toISOString()
-            });
-            aiText = `NOTA CAPTURADA: "${datos.texto || trimmedInput}" // ALMACENADA EN MEMORIA CENTRAL.`;
-          }
+        case 'horario':
+          await saveData('horario', {
+            actividad: resultado.materia?.toUpperCase() || "MATERIA",
+            dia: resultado.dia,
+            hora: resultado.hora,
+            modalidad: resultado.modalidad || "Presencial",
+            tipo: 'clase'
+          });
+          aiText = `MATERIA REGISTRADA: ${resultado.materia} // DÍA: ${resultado.dia} // HORA: ${resultado.hora}.`;
           break;
-        }
+
+        case 'tarea':
+          await saveData('tareas', {
+            nombre: resultado.tarea,
+            ingreso: new Date().toISOString(),
+            culminacion: resultado.culminacion,
+            criticidad: 5,
+            estado: EstadoTarea.PENDIENTE,
+            prioridad: PrioridadTarea.MEDIA
+          });
+          aiText = `TAREA ASIGNADA: ${resultado.tarea} // CULMINACIÓN: ${resultado.culminacion}.`;
+          break;
+
+        case 'nota':
+          await saveData('notas', {
+            contenido: resultado.texto || trimmedInput,
+            timestamp: new Date().toISOString()
+          });
+          aiText = `NOTA CAPTURADA: "${resultado.texto || trimmedInput}" // ALMACENADA EN MEMORIA CENTRAL.`;
+          break;
 
         case 'chat':
           aiText = resultado.respuesta;
