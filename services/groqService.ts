@@ -6,26 +6,29 @@ const groq = new Groq({
 });
 
 export const analizarComando = async (texto: string) => {
-  const prompt = `Eres el motor semántico de una agenda. Analiza este texto: "${texto}".
-  Devuelve ÚNICAMENTE un objeto JSON válido. Categorías y reglas:
+  const prompt = `Eres el cerebro de una agenda inteligente (A-AI). Analiza este texto: "${texto}".
+  Devuelve ÚNICAMENTE un objeto JSON válido. Categorías:
 
-  1. "horario" (Materias):
-     - Regla: Detectar nombre de materia y extraerlo como título ÚNICO.
-     - Atributos: {"tipo": "horario", "materia": "nombre_unico", "dia": "dia", "hora": "rango_hora", "modalidad": "presencial/virtual/semi"}
+  1. "modificacion": 
+     - Regla: Detectar intención de cambio (ej. "cambia", "actualiza", "ya no es").
+     - Atributos: {"tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "id_o_nombre", "nuevos_datos": {}}
 
-  2. "tarea" (Acción con tiempo):
-     - Regla: Solo si incluye hora específica, fecha límite o nivel de criticidad explícito.
-     - Atributos: {"tipo": "tarea", "tarea": "descripcion", "culminacion": "hora_o_fecha", "criticidad": "Alta/Media/Baja"}
+  2. "consulta":
+     - Regla: Preguntas sobre la agenda (ej. "¿Qué hago primero?", "¿Qué materias tengo hoy?").
+     - Atributos: {"tipo": "consulta", "intencion": "recomendar/listar/fecha_actual"}
 
-  3. "nota" (Random/Sin contexto):
-     - Regla: Afirmaciones sin tiempo (ej. "Me deben 50", "Tengo que fregar").
-     - Atributos: {"tipo": "nota", "texto": "texto_integro"}
+  3. "guardado":
+     - Subtipos: 
+       - "horario": Materia única, día, hora, modalidad.
+       - "tarea": Descripción, culminación (hora/fecha), criticidad (Alta/Media/Baja).
+       - "nota": Texto íntegro.
+     - Atributos: {"tipo": "guardado", "subtipo": "horario/tarea/nota", "datos": {}}
 
-  4. "consulta" (Conversational):
-     - Regla: Preguntas sobre el estado de la agenda (ej. "¿Qué tengo hoy?", "¿Por qué empiezo?").
-     - Atributos: {"tipo": "consulta", "intencion": "priorizar/listar/resumir"}
+  4. "chat":
+     - Regla: Saludos, despedidas o charla rápida sin intención de agenda.
+     - Atributos: {"tipo": "chat", "respuesta": "Respuesta corta y eficiente de IA"}
 
-  No añadas markdown ni texto fuera del JSON. Usa temperatura 0 para máxima precisión.`;
+  No añadas markdown ni texto fuera del JSON. Temperatura 0 para precisión.`;
 
   const chatCompletion = await groq.chat.completions.create({
     messages: [{ role: "user", content: prompt }],

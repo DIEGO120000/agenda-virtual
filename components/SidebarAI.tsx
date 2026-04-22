@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppState } from '../types';
 import { analizarComando, procesarConsulta } from '../services/groqService';
-import { saveData } from '../services/db';
+import { saveData, updateMyData } from '../services/db';
 import { EstadoTarea, PrioridadTarea } from '../types';
 import { Send, Mic, MicOff, Loader2, ChevronUp, ChevronDown, Terminal } from 'lucide-react';
 
@@ -42,46 +42,73 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
       let aiText = "";
 
       switch (resultado.tipo) {
+        case 'modificacion': {
+          const collectionName = resultado.objetivo === 'horario' ? 'horario' : 
+                                resultado.objetivo === 'tareas' ? 'tareas' : 'notas';
+          
+          const collectionData = state[resultado.objetivo as keyof AppState] as any[];
+          const target = collectionData.find((item: any) => 
+            item.id === resultado.identificador || 
+            (item.nombre || item.actividad || item.materia || item.contenido)?.toLowerCase().includes(String(resultado.identificador).toLowerCase())
+          );
+
+          if (target) {
+            await updateMyData(collectionName, target.id, resultado.nuevos_datos);
+            aiText = `ACTUALIZACIÓN EXITOSA // ${resultado.objetivo.toUpperCase()}: ${target.id} MODIFICADO.`;
+          } else {
+            aiText = `ERROR: NO SE ENCONTRÓ EL OBJETIVO "${resultado.identificador}" EN ${resultado.objetivo.toUpperCase()}.`;
+          }
+          break;
+        }
+
         case 'consulta':
           aiText = await procesarConsulta(resultado.intencion, state.tareas);
           break;
-        case 'horario':
-          await saveData('horario', {
-            actividad: resultado.materia?.toUpperCase() || "MATERIA",
-            dia: resultado.dia,
-            hora: resultado.hora,
-            modalidad: resultado.modalidad || "Presencial",
-            tipo: 'clase'
-          });
-          aiText = `MATERIA REGISTRADA: ${resultado.materia} // DÍA: ${resultado.dia} // HORA: ${resultado.hora}.`;
+
+        case 'guardado': {
+          const { subtipo, datos } = resultado;
+          if (subtipo === 'horario') {
+            await saveData('horario', {
+              actividad: datos.materia?.toUpperCase() || "MATERIA",
+              dia: datos.dia,
+              hora: datos.hora,
+              modalidad: datos.modalidad || "Presencial",
+              tipo: 'clase'
+            });
+            aiText = `MATERIA REGISTRADA: ${datos.materia} // DÍA: ${datos.dia} // HORA: ${datos.hora}.`;
+          } else if (subtipo === 'tarea') {
+            const criticidadMap: Record<string, number> = { 'Alta': 10, 'Media': 7, 'Baja': 4 };
+            const critValue = criticidadMap[datos.criticidad as string] || 5;
+            await saveData('tareas', {
+              nombre: datos.tarea,
+              ingreso: new Date().toISOString(),
+              recomendado: datos.recomendado || new Date().toISOString().split('T')[0],
+              culminacion: datos.culminacion || new Date().toISOString().split('T')[0],
+              criticidad: critValue,
+              estado: EstadoTarea.PENDIENTE,
+              prioridad: critValue > 7 ? PrioridadTarea.ALTA : PrioridadTarea.MEDIA
+            });
+            aiText = `TAREA ASIGNADA: ${datos.tarea} // CULMINACIÓN: ${datos.culminacion} // CRITICIDAD: ${datos.criticidad}.`;
+          } else if (subtipo === 'nota') {
+            await saveData('notas', {
+              contenido: datos.texto || trimmedInput,
+              timestamp: new Date().toISOString()
+            });
+            aiText = `NOTA CAPTURADA: "${datos.texto || trimmedInput}" // ALMACENADA EN MEMORIA CENTRAL.`;
+          }
           break;
-        case 'tarea':
-          const criticidadMap: Record<string, number> = { 'Alta': 10, 'Media': 7, 'Baja': 4 };
-          const critValue = criticidadMap[resultado.criticidad as string] || 5;
-          
-          await saveData('tareas', {
-            nombre: resultado.tarea,
-            ingreso: new Date().toISOString(),
-            recomendado: resultado.recomendado || new Date().toISOString().split('T')[0],
-            culminacion: resultado.culminacion || new Date().toISOString().split('T')[0],
-            criticidad: critValue,
-            estado: EstadoTarea.PENDIENTE,
-            prioridad: critValue > 7 ? PrioridadTarea.ALTA : PrioridadTarea.MEDIA
-          });
-          aiText = `TAREA ASIGNADA: ${resultado.tarea} // CULMINACIÓN: ${resultado.culminacion} // CRITICIDAD: ${resultado.criticidad}.`;
+        }
+
+        case 'chat':
+          aiText = resultado.respuesta;
           break;
-        case 'nota':
-          await saveData('notas', {
-            contenido: resultado.texto || trimmedInput,
-            timestamp: new Date().toISOString()
-          });
-          aiText = `NOTA CAPTURADA: "${resultado.texto || trimmedInput}" // ALMACENADA EN MEMORIA CENTRAL.`;
-          break;
+
         default:
           aiText = "COMANDO NO RECONOCIDO POR EL MOTOR SEMÁNTICO.";
       }
 
-      setMessages(prev => [...prev, { role: 'ai', text: resultado.tipo === 'consulta' ? aiText : `COMANDO EJECUTADO // ${aiText}` }]);
+      const finalMsg = (resultado.tipo === 'consulta' || resultado.tipo === 'chat') ? aiText : `COMANDO EJECUTADO // ${aiText}`;
+      setMessages(prev => [...prev, { role: 'ai', text: finalMsg }]);
     } catch (error: any) {
       setMessages(prev => [...prev, { role: 'error', text: `GROQ_ERR: FALLA EN LA INFERENCIA (${error.message})` }]);
     } finally {
