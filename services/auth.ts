@@ -1,24 +1,31 @@
 import { 
+  getAuth, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut 
 } from "firebase/auth";
-import { auth } from "../firebase/config";
+import { app } from "../firebase/config";
+
+const auth = getAuth(app);
 
 export const loginWithEmail = async (email: any, password: any) => {
+  console.log("Iniciando sesión para:", email);
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Error detallado en login:", error.code, error.message);
     throw error;
   }
 };
 
-export const registerWithEmail = async (email: any, password: any) => {
+export const registerUser = async (email: any, password: any) => {
+  console.log("Iniciando registro para:", email);
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     return userCredential.user;
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Error detallado en registro:", error.code, error.message);
     throw error;
   }
 };

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { loginWithEmail, registerWithEmail } from '../services/auth';
+import { loginWithEmail, registerUser } from '../services/auth';
 import { Eye, EyeOff, Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
 
 interface LoginProps {
@@ -20,11 +20,15 @@ const Login: React.FC<LoginProps> = ({ onAuthSuccess }) => {
     setLoading(true);
     setError(null);
 
+    // Aseguramos que pasamos strings puros extraídos del estado
+    const cleanEmail = email.trim();
+    const cleanPassword = password;
+
     try {
       if (isLogin) {
-        await loginWithEmail(email, password);
+        await loginWithEmail(cleanEmail, cleanPassword);
       } else {
-        await registerWithEmail(email, password);
+        await registerUser(cleanEmail, cleanPassword);
       }
       onAuthSuccess();
     } catch (err: any) {
@@ -37,8 +41,10 @@ const Login: React.FC<LoginProps> = ({ onAuthSuccess }) => {
         setError('El correo ya está en uso.');
       } else if (err.code === 'auth/weak-password') {
         setError('La contraseña es muy débil (mín. 6 caracteres).');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('El formato del correo es inválido.');
       } else {
-        setError('Ocurrió un error inesperado.');
+        setError(`Error: ${err.message}`);
       }
     } finally {
       setLoading(false);
