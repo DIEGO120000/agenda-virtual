@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppState } from '../types';
-import { semanticClassifier } from '../services/nlpParser';
+import { analizarComando } from '../services/groqService';
 import { saveData } from '../services/db';
+import { EstadoTarea, PrioridadTarea } from '../types';
 import { Send, Mic, MicOff, Loader2, ChevronUp, ChevronDown, Terminal } from 'lucide-react';
 
 interface Props {
@@ -12,7 +13,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<{ role: 'ai' | 'user' | 'error'; text: string }[]>([
-    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v5.0 // MOTOR SEMÁNTICO ACTIVO // ENRUTAMIENTO DIRECTO A FIRESTORE.' }
+    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v6.0 // MOTOR SEMÁNTICO GROQ (LLAMA 3.1) ACTIVO.' }
   ]);
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -37,27 +38,49 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
     setLoading(true);
 
     try {
-      const action = semanticClassifier(trimmedInput);
+      const resultado = await analizarComando(trimmedInput);
       let aiText = "";
 
-      switch (action.type) {
-        case 'HORARIO':
-          await saveData('horario', action.data);
-          aiText = `MATERIA REGISTRADA: ${action.data.actividad} // DÍA: ${action.data.dia} // HORA: ${action.data.hora}.`;
+      switch (resultado.tipo) {
+        case 'horario':
+          await saveData('horario', {
+            actividad: resultado.materia?.toUpperCase() || "MATERIA",
+            dia: resultado.dia,
+            hora: resultado.horario,
+            modalidad: resultado.modalidad || "Presencial",
+            tipo: 'clase'
+          });
+          aiText = `MATERIA REGISTRADA: ${resultado.materia} // DÍA: ${resultado.dia} // HORA: ${resultado.horario}.`;
           break;
-        case 'TAREA':
-          await saveData('tareas', action.data);
-          aiText = `TAREA ASIGNADA: ${action.data.nombre} // CULMINACIÓN: ${action.data.culminacion} // CRITICIDAD: ${action.data.criticidad}.`;
+        case 'tarea':
+          const criticidadMap: Record<string, number> = { 'Alta': 10, 'Media': 7, 'Baja': 4 };
+          const critValue = criticidadMap[resultado.criticidad as string] || 5;
+          
+          await saveData('tareas', {
+            nombre: resultado.tarea,
+            ingreso: new Date().toISOString(),
+            recomendado: resultado.recomendado || new Date().toISOString().split('T')[0],
+            culminacion: resultado.culminacion || new Date().toISOString().split('T')[0],
+            criticidad: critValue,
+            estado: EstadoTarea.PENDIENTE,
+            prioridad: critValue > 7 ? PrioridadTarea.ALTA : PrioridadTarea.MEDIA
+          });
+          aiText = `TAREA ASIGNADA: ${resultado.tarea} // CULMINACIÓN: ${resultado.culminacion} // CRITICIDAD: ${resultado.criticidad}.`;
           break;
-        case 'NOTA':
-          await saveData('notas', action.data);
-          aiText = `NOTA CAPTURADA: "${action.data.contenido}" // ALMACENADA EN MEMORIA CENTRAL.`;
+        case 'nota':
+          await saveData('notas', {
+            contenido: resultado.texto || trimmedInput,
+            timestamp: new Date().toISOString()
+          });
+          aiText = `NOTA CAPTURADA: "${resultado.texto || trimmedInput}" // ALMACENADA EN MEMORIA CENTRAL.`;
           break;
+        default:
+          aiText = "COMANDO NO RECONOCIDO POR EL MOTOR SEMÁNTICO.";
       }
 
       setMessages(prev => [...prev, { role: 'ai', text: `COMANDO EJECUTADO // ${aiText}` }]);
     } catch (error: any) {
-      setMessages(prev => [...prev, { role: 'error', text: `LOCAL_ERR: FALLA EN EL ENRUTAMIENTO (${error.message})` }]);
+      setMessages(prev => [...prev, { role: 'error', text: `GROQ_ERR: FALLA EN LA INFERENCIA (${error.message})` }]);
     } finally {
       setLoading(false);
     }
