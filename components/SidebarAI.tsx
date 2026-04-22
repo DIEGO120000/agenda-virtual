@@ -76,17 +76,27 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
           aiText = `MATERIA REGISTRADA: ${resultado.materia} // DÍA: ${resultado.dia} // HORA: ${resultado.hora}.`;
           break;
 
-        case 'tarea':
+        case 'tarea': {
+          const fechaIngreso = new Date();
+          const parsedCulm = new Date(resultado.culminacion);
+          const fechaCulminacion = isNaN(parsedCulm.getTime()) 
+            ? new Date(new Date().setHours(23, 59, 59)) 
+            : parsedCulm;
+          
+          const fechaRecomendado = new Date(fechaIngreso.getTime() + (fechaCulminacion.getTime() - fechaIngreso.getTime()) / 2);
+
           await saveData('tareas', {
             nombre: resultado.tarea,
-            ingreso: new Date().toISOString(),
-            culminacion: resultado.culminacion,
+            ingreso: fechaIngreso.toISOString(),
+            recomendado: fechaRecomendado.toISOString(),
+            culminacion: fechaCulminacion.toISOString(),
             criticidad: 5,
             estado: EstadoTarea.PENDIENTE,
             prioridad: PrioridadTarea.MEDIA
           });
-          aiText = `TAREA ASIGNADA: ${resultado.tarea} // CULMINACIÓN: ${resultado.culminacion}.`;
+          aiText = `TAREA ASIGNADA: ${resultado.tarea} // CULMINACIÓN: ${fechaCulminacion.toISOString()} // RECOMENDADO: ${fechaRecomendado.toISOString()}.`;
           break;
+        }
 
         case 'nota':
           await saveData('notas', {

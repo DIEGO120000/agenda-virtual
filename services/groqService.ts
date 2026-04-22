@@ -6,14 +6,19 @@ const groq = new Groq({
 });
 
 export const analizarComando = async (texto: string) => {
-  const prompt = `Eres un enrutador de datos estricto. Analiza: "${texto}".
+  const now = new Date().toISOString();
+  const prompt = `Eres un enrutador de datos estricto. La fecha y hora actual exacta del sistema es: ${now}.
+  Analiza: "${texto}".
+  
+  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo ('culminacion', 'hora', 'dia'), DEBES calcular la fecha real utilizando el contexto actual y devolverla ESTRICTAMENTE en formato ISO 8601 (YYYY-MM-DDTHH:mm:ss). NUNCA devuelvas palabras como "mañana", "hoy" o "a las 12". Mapea siempre a la fecha ISO correspondiente.
+
   Devuelve SOLO un JSON válido según estas reglas:
-  1. "horario": Materias con días/horas. -> {"tipo": "horario", "materia": "...", "dia": "...", "hora": "...", "modalidad": "..."}
-  2. "tarea": Acciones con TIEMPO LÍMITE explícito (a las 12, mañana, viernes). -> {"tipo": "tarea", "tarea": "...", "culminacion": "..."}
-  3. "nota": Datos sueltos, afirmaciones, deudas o tareas SIN tiempo límite (ej. "pedro me debe 50", "comprar pan"). -> {"tipo": "nota", "texto": "..."}
-  4. "consulta": Preguntas sobre qué hacer o qué hay en la agenda (ej. "¿qué tareas tengo?", "¿qué hago hoy?"). -> {"tipo": "consulta", "intencion": "..."}
+  1. "horario": Materias con días/horas. -> {"tipo": "horario", "materia": "...", "dia": "ISO_DATE", "hora": "ISO_DATE", "modalidad": "..."}
+  2. "tarea": Acciones con TIEMPO LÍMITE explícito. -> {"tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE"}
+  3. "nota": Datos sueltos o tareas SIN tiempo límite. -> {"tipo": "nota", "texto": "..."}
+  4. "consulta": Preguntas sobre la agenda. -> {"tipo": "consulta", "intencion": "..."}
   5. "modificacion": Peticiones de alterar datos. -> {"tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "id_o_nombre", "nuevos_datos": {}}
-  6. "chat": Saludos simples ("hola"). -> {"tipo": "chat", "respuesta": "..."}
+  6. "chat": Saludos simples. -> {"tipo": "chat", "respuesta": "..."}
   
   CERO TEXTO EXTRA. SOLO JSON.`;
 
