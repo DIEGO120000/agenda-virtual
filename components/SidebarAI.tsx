@@ -11,15 +11,35 @@ interface Props {
 
 const fastPathRouter = (texto: string) => {
   const txt = texto.toLowerCase().trim();
-  if (/^(hola|klk|buenas|buenos dias|buenas tardes|saludos|hey)$/.test(txt)) {
-    return "SISTEMA OPERATIVO A-AI EN LÍNEA. Esperando comandos, operador.";
+  
+  // 1. Banco de Saludos
+  if (/^(hola|klk|buenas|buenos dias|buenos días|buenas tardes|buenas noches|saludos|hey|que tal|qué tal)$/.test(txt)) {
+    const saludos = [
+      "¡Hola! ¿Cómo estás? ¿En qué te puedo ayudar el día de hoy?",
+      "¡Hola Diego! ¿Qué tenemos en la agenda para hoy?",
+      "¡Buenas! Todo listo por aquí, ¿qué necesitas organizar hoy?",
+      "¡Hola! Dime, ¿qué plan tenemos?"
+    ];
+    return saludos[Math.floor(Math.random() * saludos.length)];
   }
-  if (/^(gracias|ok|listo|chao|adios|entendido|perfecto|nitido)$/.test(txt)) {
-    return "Comprendido. Sistema a la espera.";
+  
+  // 2. Banco de Despedidas / Confirmaciones
+  if (/^(gracias|ok|listo|chao|adios|adiós|entendido|perfecto|nitido|vale|excelente)$/.test(txt)) {
+    const confirmaciones = [
+      "¡De nada! Aquí estoy si necesitas algo más.",
+      "¡Perfecto! Todo bajo control.",
+      "¡A la orden! Me avisas si hay algo más que anotar.",
+      "¡Entendido! Sigamos dándole."
+    ];
+    return confirmaciones[Math.floor(Math.random() * confirmaciones.length)];
   }
+  
+  // 3. Comandos de sistema locales
   if (/^(clear|limpiar|borrar)$/.test(txt)) {
     return "CLEAR_COMMAND";
   }
+  
+  // Si no coincide con palabras rápidas, devuelve null (pasa a la IA de Groq)
   return null;
 };
 
@@ -53,7 +73,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
     const fastResponse = fastPathRouter(trimmedInput);
     if (fastResponse) {
       if (fastResponse === "CLEAR_COMMAND") {
-        setMessages([{ role: 'ai', text: 'SISTEMA OPERATIVO A-AI v6.0 // MEMORIA TEMPORAL LIMPIADA.' }]);
+        setMessages([{ role: 'ai', text: 'Chat limpiado. ¡Empecemos de cero!' }]);
       } else {
         setMessages(prev => [...prev, { role: 'ai', text: fastResponse }]);
       }
