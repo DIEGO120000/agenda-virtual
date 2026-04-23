@@ -9,6 +9,20 @@ interface Props {
   state: AppState;
 }
 
+const fastPathRouter = (texto: string) => {
+  const txt = texto.toLowerCase().trim();
+  if (/^(hola|klk|buenas|buenos dias|buenas tardes|saludos|hey)$/.test(txt)) {
+    return "SISTEMA OPERATIVO A-AI EN LÍNEA. Esperando comandos, operador.";
+  }
+  if (/^(gracias|ok|listo|chao|adios|entendido|perfecto|nitido)$/.test(txt)) {
+    return "Comprendido. Sistema a la espera.";
+  }
+  if (/^(clear|limpiar|borrar)$/.test(txt)) {
+    return "CLEAR_COMMAND";
+  }
+  return null;
+};
+
 const SidebarAI: React.FC<Props> = ({ state }) => {
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -35,6 +49,17 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
     if (!textToProcess) {
       setMessages(prev => [...prev, { role: 'user', text: trimmedInput }]);
     }
+
+    const fastResponse = fastPathRouter(trimmedInput);
+    if (fastResponse) {
+      if (fastResponse === "CLEAR_COMMAND") {
+        setMessages([{ role: 'ai', text: 'SISTEMA OPERATIVO A-AI v6.0 // MEMORIA TEMPORAL LIMPIADA.' }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'ai', text: fastResponse }]);
+      }
+      return;
+    }
+
     setLoading(true);
 
     try {
