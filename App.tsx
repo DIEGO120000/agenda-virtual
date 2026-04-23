@@ -23,7 +23,7 @@ const App: React.FC = () => {
     horario: [] 
   });
 
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('agenda_dark_mode') === 'true');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -57,9 +57,13 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-    localStorage.setItem('agenda_dark_mode', darkMode.toString());
-  }, [darkMode]);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   // Handlers sincronizados con DB
   const handleAddTask = async (t: any) => {
@@ -155,7 +159,7 @@ const App: React.FC = () => {
         <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="animate-in fade-in slide-in-from-left duration-700">
             <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3">
-              <Calendar className="text-blue-600" size={32} /> FORMATO A <span className="text-blue-600">CENTRAL v6.0</span>
+              <Calendar className="text-blue-600" size={32} /> AGENDA <span className="text-blue-600">VIRTUAL</span>
             </h1>
             <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1 ml-1 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> 
@@ -163,8 +167,8 @@ const App: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-              {darkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-600" />}
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+              {theme === 'dark' ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-600" />}
             </button>
             <button onClick={() => logout()} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-gray-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-all">
               <LogOut size={20} />
