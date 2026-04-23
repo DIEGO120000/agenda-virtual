@@ -23,7 +23,7 @@ const App: React.FC = () => {
     horario: [] 
   });
 
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -143,7 +143,7 @@ const App: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0B1121]">
         <Loader2 className="animate-spin text-blue-600" size={48} />
       </div>
     );
@@ -154,7 +154,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0B1121] dark:text-white transition-colors duration-300">
       <main className="max-w-7xl mx-auto p-4 md:p-8 pb-48">
         <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="animate-in fade-in slide-in-from-left duration-700">
