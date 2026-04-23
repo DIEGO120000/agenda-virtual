@@ -53,7 +53,8 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
   const [isRecording, setIsRecording] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -168,35 +169,44 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
     }
   };
 
-  const toggleMic = async () => {
+  const toggleRecording = async () => {
     if (isRecording) {
-      recognitionRef.current?.stop();
+      // Detener grabación
+      mediaRecorderRef.current?.stop();
       setIsRecording(false);
-      return;
-    }
+    } else {
+      // Iniciar grabación
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
 
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      
-      if (!SpeechRecognition) {
-        setMessages(prev => [...prev, { role: 'error', text: "ERROR: NAVEGADOR NO SOPORTA VOZ." }]);
-        return;
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          stream.getTracks().forEach(track => track.stop()); // Apagar luz roja del navegador
+          
+          setLoading(true);
+          try {
+            const textoTranscrito = await transcribirAudio(audioBlob);
+            setInput(textoTranscrito); // Coloca lo que dijiste en el input
+          } catch (error) {
+            console.error("Error en Whisper:", error);
+            setMessages(prev => [...prev, { role: 'error', text: "SYS_ERR: Fallo en reconocimiento de voz." }]);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error("Permiso de micrófono denegado:", err);
       }
-
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'es-DO';
-      recognition.onstart = () => setIsRecording(true);
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        handleSend(transcript);
-      };
-      recognition.onerror = () => setIsRecording(false);
-      recognition.onend = () => setIsRecording(false);
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'error', text: "ERROR: MICRÓFONO NO ACCESIBLE." }]);
     }
   };
 
@@ -263,7 +273,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
             <div className="p-6 bg-slate-950/80 border-t border-slate-800/50">
               <div className="flex items-end gap-3 bg-slate-900 border border-slate-700/50 rounded-2xl p-2 focus-within:border-blue-500 transition-colors">
                 <button 
-                  onClick={toggleMic}
+                  onClick={toggleRecording}
                   className={`p-3 rounded-xl ${isRecording ? 'text-red-500 animate-pulse' : 'text-slate-500 hover:text-blue-400'}`}
                 >
                   {isRecording ? <MicOff size={20} /> : <Mic size={20} />}

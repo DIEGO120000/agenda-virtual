@@ -52,3 +52,14 @@ export const procesarConsulta = async (intencion: string, estado: any) => {
 
   return response.choices[0]?.message?.content || "ERROR_DE_RESPUESTA";
 };
+
+export const transcribirAudio = async (audioBlob: Blob) => {
+  const file = new File([audioBlob], "audio.webm", { type: "audio/webm" });
+  const transcription = await groq.audio.transcriptions.create({
+    file: file,
+    model: "whisper-large-v3-turbo",
+    response_format: "json",
+    language: "es", // Forzamos el idioma para mayor velocidad
+  });
+  return transcription.text;
+};
