@@ -55,7 +55,7 @@ export const procesarConsulta = async (intencion: string, estado: any) => {
 
 export const transcribirAudio = async (audioBlob: Blob, ext: string = 'webm') => {
   const formData = new FormData();
-  formData.append("file", audioBlob, `grabacion.${ext}`);
+  formData.append("file", audioBlob, `input_audio.${ext}`);
   formData.append("model", "whisper-large-v3-turbo");
   formData.append("language", "es");
   formData.append("response_format", "json");
@@ -67,8 +67,8 @@ export const transcribirAudio = async (audioBlob: Blob, ext: string = 'webm') =>
   });
 
   if (!response.ok) {
-    const errData = await response.json();
-    throw new Error(errData.error?.message || `Error HTTP ${response.status}`);
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
   }
   const data = await response.json();
   return data.text;

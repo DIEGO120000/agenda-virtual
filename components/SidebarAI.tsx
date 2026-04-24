@@ -171,20 +171,17 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
 
   const toggleRecording = async () => {
     if (isRecording) {
-      // Detener grabación
       mediaRecorderRef.current?.stop();
       setIsRecording(false);
     } else {
-      // Iniciar grabación
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        // Detección dinámica de formato para compatibilidad móvil (iOS/Safari vs Android/Chrome)
-        let options = { mimeType: 'audio/webm' };
-        if (!MediaRecorder.isTypeSupported('audio/webm')) {
-          options = { mimeType: 'audio/mp4' };
-        }
+        // Detección de formato compatible con el dispositivo
+        const mimeTypes = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav'];
+        const supportedType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || '';
         
+        const options = supportedType ? { mimeType: supportedType } : {};
         const mediaRecorder = new MediaRecorder(stream, options);
         mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
@@ -194,15 +191,20 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
         };
 
         mediaRecorder.onstop = async () => {
-          const mime = mediaRecorder.mimeType;
-          const ext = mime.includes('mp4') ? 'm4a' : 'webm';
-          const audioBlob = new Blob(audioChunksRef.current, { type: mime });
-          stream.getTracks().forEach(track => track.stop()); 
+          stream.getTracks().forEach(track => track.stop());
+          
+          if (audioChunksRef.current.length === 0) {
+            setMessages(prev => [...prev, { role: 'error', text: "SYS_ERR: No se capturaron datos de audio." }]);
+            return;
+          }
+
+          const audioBlob = new Blob(audioChunksRef.current, { type: supportedType });
+          const ext = supportedType.includes('mp4') ? 'm4a' : 'webm';
           
           setLoading(true);
           try {
             const textoTranscrito = await transcribirAudio(audioBlob, ext);
-            setInput(textoTranscrito);
+            if (textoTranscrito) setInput(textoTranscrito);
           } catch (error: any) {
             setMessages(prev => [...prev, { role: 'error', text: `SYS_ERR: ${error.message}` }]);
           } finally {
@@ -210,10 +212,10 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
           }
         };
 
-        mediaRecorder.start();
+        mediaRecorder.start(200); // Captura datos cada 200ms para evitar buffers vacíos
         setIsRecording(true);
-      } catch (err) {
-        console.error("Permiso de micrófono denegado:", err);
+      } catch (err: any) {
+        setMessages(prev => [...prev, { role: 'error', text: `MIC_PERMISSION_ERR: ${err.message}` }]);
       }
     }
   };
