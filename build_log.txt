@@ -1,0 +1,20 @@
+
+> agenda-virtual-inteligente@1.0.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 1950 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                         2.76 kB │ gzip:   1.18 kB
+dist/assets/index-tn0RQdqM.css          0.00 kB │ gzip:   0.02 kB
+dist/assets/vendor-react-DvwhddX4.js    3.80 kB │ gzip:   1.49 kB
+dist/assets/vendor-utils-BXpptqu7.js   27.54 kB │ gzip:   7.97 kB
+dist/assets/index--4Ot-TuT.js         726.66 kB │ gzip: 191.17 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 15.65s
