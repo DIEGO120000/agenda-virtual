@@ -178,7 +178,14 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
       // Iniciar grabación
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
+        
+        // Detección dinámica de formato para compatibilidad móvil (iOS/Safari vs Android/Chrome)
+        let options = { mimeType: 'audio/webm' };
+        if (!MediaRecorder.isTypeSupported('audio/webm')) {
+          options = { mimeType: 'audio/mp4' };
+        }
+        
+        const mediaRecorder = new MediaRecorder(stream, options);
         mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
 
@@ -187,16 +194,17 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
         };
 
         mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          stream.getTracks().forEach(track => track.stop()); // Apagar luz roja del navegador
+          const mime = mediaRecorder.mimeType;
+          const ext = mime.includes('mp4') ? 'm4a' : 'webm';
+          const audioBlob = new Blob(audioChunksRef.current, { type: mime });
+          stream.getTracks().forEach(track => track.stop()); 
           
           setLoading(true);
           try {
-            const textoTranscrito = await transcribirAudio(audioBlob);
-            setInput(textoTranscrito); // Coloca lo que dijiste en el input
-          } catch (error) {
-            console.error("Error en Whisper:", error);
-            setMessages(prev => [...prev, { role: 'error', text: "SYS_ERR: Fallo en reconocimiento de voz." }]);
+            const textoTranscrito = await transcribirAudio(audioBlob, ext);
+            setInput(textoTranscrito);
+          } catch (error: any) {
+            setMessages(prev => [...prev, { role: 'error', text: `SYS_ERR: ${error.message}` }]);
           } finally {
             setLoading(false);
           }
