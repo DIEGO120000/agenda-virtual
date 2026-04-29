@@ -10,30 +10,29 @@ export const analizarComando = async (texto: string) => {
   const fechaActual = now.toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
   const isoNow = now.toISOString();
 
-  const prompt = `Eres un enrutador de datos multi-intento estricto. 
-  RECO TOTAL DEL SISTEMA (Referencia absoluta): ${fechaActual} (ISO: ${isoNow}).
+  const prompt = `ERES UN CLASIFICADOR ESTRICTO. EVALÚA EL INPUT PASO A PASO:
+  
+  REFERENCIA TEMPORAL ABSOLUTA: ${fechaActual} (ISO: ${isoNow}).
   Analiza: "${texto}".
   
   REGLAS ABSOLUTAS DE CLASIFICACIÓN:
-  1. MATERIAS (horario): Solo si tiene nombre, días fijos, hora y modalidad. NO tienen fecha de culminación.
-  2. TAREAS: Solo si es una ACCIÓN futura (verbo) Y tiene una FECHA/HORA EXACTA de culminación calculable. Si falta la fecha exacta, NO ES TAREA. NUNCA inventes fechas.
-  3. NOTAS: Si es información general, recordatorios vagos, o el tiempo es ambiguo ('esta semana', 'pronto'), CLASIFÍCALO OBLIGATORIAMENTE COMO NOTA.
+  1. MATERIAS: Si el usuario dicta una hora de inicio, una hora de fin, un día de la semana y un nombre de asignatura, ES OBLIGATORIAMENTE UNA MATERIA (tipo: "horario").
+  2. TAREAS vs NOTAS: Para que sea una TAREA, el usuario DEBE dictar explícitamente una fecha u hora de culminación exacta.
+  3. REGLA DE ORO: Si identificas una acción pero EL USUARIO NO DICTÓ FECHA DE CULMINACIÓN, ESTÁ ESTRICTAMENTE PROHIBIDO INVENTARLA. En ese caso, DEBES clasificar la entrada como una NOTA (tipo: "nota"). Nunca asumas fechas que no se dijeron explícitamente.
+  4. Si es información general o el tiempo es ambiguo ('esta semana', 'este mes', 'pronto'), CLASIFÍCALO OBLIGATORIAMENTE COMO NOTA.
 
-  Si el usuario pide realizar varias acciones, genera un arreglo de objetos JSON.
-  
-  Formato de salida (ESTRICTO):
+  Formato de salida JSON (ESTRICTO):
   {
     "actions": [
       { "tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE" },
       { "tipo": "nota", "texto": "..." },
       { "tipo": "horario", "materia": "...", "dia": "ISO_DATE", "hora": "ISO_DATE", "modalidad": "Virtual/Presencial/Semi" }
     ],
-    "respuesta": "Resumen natural consolidado."
+    "respuesta": "Resumen natural consolidado de las acciones realizadas."
   }
 
-  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo, DEBES calcular la fecha real utilizando el contexto de la fecha actual proporcionada (${fechaActual}) y devolverla ESTRICTAMENTE en formato ISO 8601.
+  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo, DEBES calcular la fecha real utilizando el contexto de la fecha actual proporcionada y devolverla ESTRICTAMENTE en formato ISO 8601.
 
-  Incluso si es una sola acción, usa el formato {"actions": [...], "respuesta": "..."}.
   CERO TEXTO EXTRA. SOLO JSON.`;
 
   const chatCompletion = await groq.chat.completions.create({

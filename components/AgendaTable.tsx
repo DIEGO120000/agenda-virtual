@@ -1,8 +1,8 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Tarea, EstadoTarea, PrioridadTarea } from '../types';
 import { differenceInSeconds, parseISO, startOfDay, isBefore } from 'date-fns';
-import { CheckCircle, Trash2, Timer, Zap } from 'lucide-react';
+import { CheckCircle, Trash2, Timer, Zap, Edit2, Save, X } from 'lucide-react';
 
 interface Props {
   tareas: Tarea[];
@@ -12,7 +12,9 @@ interface Props {
 }
 
 const AgendaTable: React.FC<Props> = ({ tareas, updateTask, removeTask, now }) => {
-  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Partial<Tarea>>({});
+
   // Función para calcular la prioridad dinámica (0 a 100+)
   const calculateDynamicPriority = (tarea: Tarea) => {
     const culmDate = new Date(tarea.culminacion);
@@ -26,34 +28,27 @@ const AgendaTable: React.FC<Props> = ({ tareas, updateTask, removeTask, now }) =
     
     // 2. Bonus por Urgencia
     if (totalSeconds <= 0) {
-      // Tarea Atrasada: Máxima prioridad
       score += 1000 + (tarea.criticidad * 10); 
     } else if (hoursRemaining < 24) {
-      // Menos de un día: Gran incremento
       score += 60 + (tarea.criticidad * 2);
     } else if (hoursRemaining < 72) {
-      // Menos de 3 días: Incremento moderado
       score += 30 + tarea.criticidad;
     } else if (hoursRemaining < 168) {
-      // Menos de una semana
       score += 10;
     }
 
-    // 3. Determinar Etiqueta Visual basada en el Score
     let label = PrioridadTarea.BAJA;
     if (score > 100) label = PrioridadTarea.ALTA;
     else if (score > 50) label = PrioridadTarea.MEDIA;
     
-    // Excepción: Si el usuario la marcó como pasatiempo manualmente, respetamos la etiqueta pero el orden es dinámico
     if (tarea.prioridad === PrioridadTarea.PASATIEMPO) {
       label = PrioridadTarea.PASATIEMPO;
-      score = score / 2; // Los pasatiempos pesan menos en el orden
+      score = score / 2;
     }
 
     return { score, label };
   };
 
-  // Memorizamos las tareas calculadas y ordenadas para optimizar rendimiento
   const processedTasks = useMemo(() => {
     return tareas.map(t => ({
       ...t,
@@ -62,6 +57,7 @@ const AgendaTable: React.FC<Props> = ({ tareas, updateTask, removeTask, now }) =
   }, [tareas, now]);
 
   const getStatus = (tarea: Tarea): EstadoTarea => {
+    if (tarea.estado === EstadoTarea.REALIZADA) return EstadoTarea.REALIZADA;
     const culmDate = startOfDay(parseISO(tarea.culminacion));
     const today = startOfDay(now);
     if (isBefore(culmDate, today)) {
@@ -88,10 +84,18 @@ const AgendaTable: React.FC<Props> = ({ tareas, updateTask, removeTask, now }) =
 
   const formatDate = (iso: string) => {
     return new Date(iso).toLocaleDateString('es-ES', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric' 
+      day: '2-digit', month: '2-digit', year: 'numeric' 
     });
+  };
+
+  const startEditing = (tarea: Tarea) => {
+    setEditingId(tarea.id);
+    setEditValues({ nombre: tarea.nombre, criticidad: tarea.criticidad });
+  };
+
+  const saveEdit = (id: string) => {
+    updateTask(id, editValues);
+    setEditingId(null);
   };
 
   return (
@@ -107,7 +111,7 @@ const AgendaTable: React.FC<Props> = ({ tareas, updateTask, removeTask, now }) =
             <th className="px-4 py-3">Tiempo Restante</th>
             <th className="px-4 py-3">Criticidad</th>
             <th className="px-4 py-3">Estado</th>
-            <th className="px-4 py-3 text-right pr-8">Prioridad Dinámica</th>
+            <th className="px-4 py-3 text-right pr-8">Acciones</th>
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-slate-900">
@@ -119,86 +123,99 @@ const AgendaTable: React.FC<Props> = ({ tareas, updateTask, removeTask, now }) =
             processedTasks.map((tarea, index) => {
               const currentStatus = getStatus(tarea);
               const { days, hours, minutes, seconds, expired } = getTimeRemaining(tarea.culminacion);
+              const isEditing = editingId === tarea.id;
+              const isDone = tarea.estado === EstadoTarea.REALIZADA;
 
               return (
-                <tr key={tarea.id} className={`border-b border-gray-100 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group ${expired ? 'bg-red-50/30 dark:bg-red-900/10' : ''}`}>
+                <tr key={tarea.id} className={`border-b border-gray-100 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group ${expired && !isDone ? 'bg-red-50/30 dark:bg-red-900/10' : ''}`}>
                   <td className="px-4 py-4 text-center">
-                    <span className="text-[10px] font-mono font-bold text-gray-400">
-                      {index + 1}
-                    </span>
+                    <span className="text-[10px] font-mono font-bold text-gray-400">{index + 1}</span>
                   </td>
                   <td className="px-4 py-4 font-semibold text-gray-800 dark:text-white">
                     <div className="flex items-center gap-2">
-                      {tarea.nombre}
-                      <button 
-                        onClick={() => updateTask(tarea.id, { estado: EstadoTarea.REALIZADA })}
-                        className="opacity-0 group-hover:opacity-100 text-green-500 hover:text-green-600 transition-all ml-2"
-                        title="Marcar como completada"
-                      >
-                        <CheckCircle size={18} />
-                      </button>
+                      {isEditing ? (
+                        <input 
+                          type="text" 
+                          value={editValues.nombre} 
+                          onChange={(e) => setEditValues({...editValues, nombre: e.target.value})}
+                          className="bg-slate-100 dark:bg-slate-800 border border-blue-500 rounded px-2 py-1 text-sm outline-none w-full"
+                        />
+                      ) : (
+                        <span className={isDone ? 'line-through text-gray-400' : ''}>{tarea.nombre}</span>
+                      )}
+                      {!isEditing && (
+                        <button 
+                          onClick={() => updateTask(tarea.id, { estado: isDone ? EstadoTarea.PENDIENTE : EstadoTarea.REALIZADA })}
+                          className={`transition-all ml-2 ${isDone ? 'text-green-500' : 'text-gray-300 hover:text-green-500 opacity-0 group-hover:opacity-100'}`}
+                          title={isDone ? "Marcar como pendiente" : "Marcar como completada"}
+                        >
+                          <CheckCircle size={18} />
+                        </button>
+                      )}
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-600 dark:text-slate-300 group-hover:text-gray-400 transition-colors">{formatDate(tarea.ingreso)}</td>
-                  <td className="px-4 py-4 text-sm text-gray-600 dark:text-slate-300 group-hover:text-gray-400 transition-colors">{formatDate(tarea.recomendado)}</td>
-                  <td className="px-4 py-4 text-sm text-gray-600 dark:text-slate-300 group-hover:text-gray-400 transition-colors">{formatDate(tarea.culminacion)}</td>
+                  <td className="px-4 py-4 text-sm text-gray-600 dark:text-slate-300">{formatDate(tarea.ingreso)}</td>
+                  <td className="px-4 py-4 text-sm text-gray-600 dark:text-slate-300">{formatDate(tarea.recomendado)}</td>
+                  <td className="px-4 py-4 text-sm text-gray-600 dark:text-slate-300">{formatDate(tarea.culminacion)}</td>
                   <td className="px-4 py-4">
-                    {expired ? (
-                      <span className="text-red-600 dark:text-red-400 font-black text-xs uppercase tracking-tighter animate-pulse">
-                        ¡VENCIDA!
-                      </span>
+                    {isDone ? (
+                      <span className="text-green-600 dark:text-green-400 font-black text-[10px] uppercase tracking-widest">FINALIZADA</span>
+                    ) : expired ? (
+                      <span className="text-red-600 dark:text-red-400 font-black text-xs uppercase tracking-tighter animate-pulse">¡VENCIDA!</span>
                     ) : (
                       <div className="flex items-center gap-1.5 font-mono text-xs">
-                        <Timer size={14} className={`${days === 0 ? 'text-red-500 animate-pulse' : 'text-blue-500 group-hover:text-gray-400 transition-colors'}`} />
-                        <span className={`font-bold transition-colors ${days === 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-white group-hover:text-gray-400'}`}>
-                          {days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m <span className="text-blue-500 group-hover:text-gray-400 transition-colors">{seconds.toString().padStart(2, '0')}s</span>
+                        <Timer size={14} className={days === 0 ? 'text-red-500 animate-pulse' : 'text-blue-500'} />
+                        <span className={`font-bold ${days === 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-white'}`}>
+                          {days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m
                         </span>
                       </div>
                     )}
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-12 bg-gray-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-300 ${tarea.criticidad > 7 ? 'bg-red-500' : tarea.criticidad > 4 ? 'bg-yellow-500' : 'bg-green-500'} group-hover:bg-gray-400`}
-                          style={{ width: `${tarea.criticidad * 10}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs font-bold font-mono group-hover:text-gray-400 transition-colors">{tarea.criticidad}/10</span>
+                      {isEditing ? (
+                        <select 
+                          value={editValues.criticidad} 
+                          onChange={(e) => setEditValues({...editValues, criticidad: parseInt(e.target.value)})}
+                          className="bg-slate-100 dark:bg-slate-800 border border-blue-500 rounded text-xs p-1"
+                        >
+                          {[...Array(11).keys()].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      ) : (
+                        <>
+                          <div className="w-12 bg-gray-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-300 ${tarea.criticidad > 7 ? 'bg-red-500' : tarea.criticidad > 4 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                              style={{ width: `${tarea.criticidad * 10}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs font-bold font-mono">{tarea.criticidad}/10</span>
+                        </>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-4 text-xs font-bold">
-                    <span className={`px-2 py-1 rounded-full transition-colors ${
-                      currentStatus === EstadoTarea.ATRASADA ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                    } group-hover:bg-gray-200 dark:group-hover:bg-slate-700 group-hover:text-gray-500`}>
+                    <span className={`px-2 py-1 rounded-full ${
+                      isDone ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                      currentStatus === EstadoTarea.ATRASADA ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 
+                      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    }`}>
                       {currentStatus}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-sm text-right pr-4">
-                    <div className="flex items-center justify-end gap-3">
-                      <div className="flex flex-col items-end">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase border transition-colors ${
-                          tarea.dynamic.label === PrioridadTarea.ALTA ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800' :
-                          tarea.dynamic.label === PrioridadTarea.MEDIA ? 'bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800' :
-                          tarea.dynamic.label === PrioridadTarea.BAJA ? 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' :
-                          'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800'
-                        } group-hover:bg-gray-100 group-hover:text-gray-500 group-hover:border-gray-300 dark:group-hover:bg-slate-800`}>
-                          {tarea.dynamic.label}
-                        </span>
-                        <span className="text-[8px] font-mono text-gray-400 dark:text-slate-600 mt-1 uppercase tracking-tighter">
-                          Rango IA: {Math.round(tarea.dynamic.score)}
-                        </span>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          if (window.confirm('¿Eliminar esta tarea definitivamente?')) {
-                            removeTask(tarea.id);
-                          }
-                        }}
-                        className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                  <td className="px-4 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {isEditing ? (
+                        <>
+                          <button onClick={() => saveEdit(tarea.id)} className="text-blue-500 hover:text-blue-600"><Save size={18} /></button>
+                          <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-red-500"><X size={18} /></button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => startEditing(tarea)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-500 transition-all"><Edit2 size={16} /></button>
+                          <button onClick={() => window.confirm('¿Eliminar?') && removeTask(tarea.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all"><Trash2 size={16} /></button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
