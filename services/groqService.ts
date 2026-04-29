@@ -34,7 +34,7 @@ export const analizarComando = async (texto: string) => {
 
 export const procesarConsulta = async (intencion: string, tareas: any[], horario: any[]) => {
   const now = new Date().toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
-  const prompt = `Eres un asistente de estudio amigable, natural y proactivo. NADA de lenguaje robótico ni confirmaciones de comandos. 
+  const prompt = `Eres un asistente de estudio amigable, natural y proactivo. NADA de lenguaje robótico ni menciones a "comandos" o "sistemas". 
   Hora actual: ${now}. 
   Tareas: ${JSON.stringify(tareas)}. 
   Horario de clases: ${JSON.stringify(horario)}. 
@@ -43,7 +43,7 @@ export const procesarConsulta = async (intencion: string, tareas: any[], horario
   1. Si el usuario pregunta qué le toca hoy, revisa el horario y díselo de forma conversacional.
   2. Si una tarea pertenece a una materia, revisa cuándo toca esa materia para recomendar el mejor momento de estudio.
   3. CRÍTICO: Siempre planifica y recomienda que el usuario termine sus tareas con al menos 2 o 3 días de antelación a la fecha límite.
-  4. Sé empático, directo y usa un tono casual.`;
+  4. Sé empático, directo y usa un tono casual. NUNCA uses la palabra "comando".`;
 
   const response = await groq.chat.completions.create({
     messages: [{ role: "system", content: prompt }, { role: "user", content: intencion }],

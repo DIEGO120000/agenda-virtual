@@ -34,9 +34,13 @@ const fastPathRouter = (texto: string) => {
     return confirmaciones[Math.floor(Math.random() * confirmaciones.length)];
   }
   
-  // 3. Comandos de sistema locales
+  // 3. Comandos de sistema locales / Ayuda
   if (/^(clear|limpiar|borrar)$/.test(txt)) {
     return "CLEAR_COMMAND";
+  }
+  
+  if (/^(ayuda|help|que puedes hacer|qué puedes hacer|instrucciones)$/.test(txt)) {
+    return "¡Claro! Puedo ayudarte a organizar tu horario, anotar tareas, crear notas rápidas o simplemente responder tus dudas sobre lo que tienes pendiente. Solo dime qué necesitas.";
   }
   
   // Si no coincide con palabras rápidas, devuelve null (pasa a la IA de Groq)
@@ -165,13 +169,13 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
           break;
 
         default:
-          aiText = "COMANDO NO RECONOCIDO POR EL MOTOR SEMÁNTICO.";
+          aiText = await procesarConsulta(trimmedInput, state.tareas, state.horario);
       }
 
-      const finalMsg = (resultado.tipo === 'consulta' || resultado.tipo === 'chat') ? aiText : `COMANDO EJECUTADO // ${aiText}`;
+      const finalMsg = (resultado.tipo === 'consulta' || resultado.tipo === 'chat' || !resultado.tipo) ? aiText : `Hecho: ${aiText}`;
       setMessages(prev => [...prev, { role: 'ai', text: finalMsg }]);
     } catch (error: any) {
-      setMessages(prev => [...prev, { role: 'error', text: `GROQ_ERR: FALLA EN LA INFERENCIA (${error.message})` }]);
+      setMessages(prev => [...prev, { role: 'error', text: `Lo siento, hubo un problema: ${error.message}` }]);
     } finally {
       setLoading(false);
     }
@@ -267,7 +271,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
           <div className="flex flex-col h-[calc(60vh-4rem)]">
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
               {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div className={`max-w-[85%] px-5 py-4 rounded-2xl text-[13px] mono border shadow-lg ${
                     m.role === 'user' ? 'bg-blue-600 text-white border-blue-500' : 
                     m.role === 'error' ? 'bg-red-950/40 text-red-500 border-red-900/50' :
@@ -275,6 +279,24 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
                   }`}>
                     <p className="leading-relaxed">{m.text}</p>
                   </div>
+                  
+                  {m.role === 'ai' && i === 0 && messages.length === 1 && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {[
+                        "¿Qué materias tengo hoy?",
+                        "Recomiéndame qué tareas hacer",
+                        "¿Qué tareas vencen pronto?"
+                      ].map((chip) => (
+                        <button
+                          key={chip}
+                          onClick={() => handleSend(chip)}
+                          className="border border-white/20 bg-transparent rounded-full text-zinc-300 text-sm px-4 py-2 hover:bg-white/10 transition-all active:scale-95"
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               {loading && (
@@ -288,22 +310,6 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
             </div>
 
             <div className="p-6 bg-slate-950/80 border-t border-slate-800/50">
-              <div className="flex flex-wrap gap-2 mb-4">
-                {[
-                  "¿Qué materias tengo hoy?",
-                  "Recomiéndame qué tareas hacer",
-                  "¿Qué tareas vencen pronto?"
-                ].map((chip) => (
-                  <button
-                    key={chip}
-                    onClick={() => handleSend(chip)}
-                    className="px-3 py-1.5 rounded-full bg-slate-800/50 border border-slate-700/50 text-slate-400 text-[11px] mono hover:bg-blue-600/20 hover:text-blue-400 hover:border-blue-500/50 transition-all active:scale-95"
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-
               <div className="flex items-end gap-3 bg-slate-900 border border-slate-700/50 rounded-2xl p-2 focus-within:border-blue-500 transition-colors">
                 <button 
                   onClick={toggleRecording}
