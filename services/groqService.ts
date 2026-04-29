@@ -53,16 +53,16 @@ export const procesarConsulta = async (intencion: string, estado: any) => {
   return response.choices[0]?.message?.content || "ERROR_DE_RESPUESTA";
 };
 
-export const transcribirAudio = async (audioBlob: Blob, ext: string = 'webm') => {
+export const transcribirAudio = async (audioBlob: Blob) => {
   const formData = new FormData();
-  formData.append("file", audioBlob, `input_audio.${ext}`);
-  formData.append("model", "whisper-large-v3-turbo");
-  formData.append("language", "es");
-  formData.append("response_format", "json");
+  formData.append("file", audioBlob, "audio.webm");
+  formData.append("model", "whisper-large-v3");
 
   const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
     method: "POST",
-    headers: { "Authorization": `Bearer ${import.meta.env.VITE_GROQ_API_KEY}` },
+    headers: { 
+      "Authorization": `Bearer ${import.meta.env.VITE_GROQ_API_KEY}` 
+    },
     body: formData
   });
 

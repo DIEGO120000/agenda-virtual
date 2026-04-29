@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AppState } from '../types';
-import { analizarComando, procesarConsulta } from '../services/groqService';
+import { analizarComando, procesarConsulta, transcribirAudio } from '../services/groqService';
 import { saveData, updateMyData } from '../services/db';
 import { EstadoTarea, PrioridadTarea } from '../types';
 import { Send, Mic, MicOff, Loader2, ChevronUp, ChevronDown, Terminal } from 'lucide-react';
@@ -199,11 +199,10 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
           }
 
           const audioBlob = new Blob(audioChunksRef.current, { type: supportedType });
-          const ext = supportedType.includes('mp4') ? 'm4a' : 'webm';
           
           setLoading(true);
           try {
-            const textoTranscrito = await transcribirAudio(audioBlob, ext);
+            const textoTranscrito = await transcribirAudio(audioBlob);
             if (textoTranscrito) setInput(textoTranscrito);
           } catch (error: any) {
             setMessages(prev => [...prev, { role: 'error', text: `SYS_ERR: ${error.message}` }]);
