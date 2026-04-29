@@ -47,7 +47,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<{ role: 'ai' | 'user' | 'error'; text: string }[]>([
-    { role: 'ai', text: 'SISTEMA OPERATIVO A-AI v6.0 // MOTOR SEMÁNTICO GROQ (LLAMA 3.1) ACTIVO.' }
+    { role: 'ai', text: '¡Hola! Soy tu asistente de estudio. ¿En qué puedo ayudarte hoy?' }
   ]);
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -116,7 +116,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
         }
 
         case 'consulta':
-          aiText = await procesarConsulta(resultado.intencion, state.tareas);
+          aiText = await procesarConsulta(resultado.intencion, state.tareas, state.horario);
           break;
 
         case 'horario':
@@ -251,10 +251,10 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
               <Terminal size={20} />
             </div>
             <div className="flex flex-col">
-              <span className="mono font-bold text-[11px] tracking-[0.2em] text-blue-500 uppercase">A-AI TERMINAL v5.0</span>
+              <span className="mono font-bold text-[11px] tracking-[0.2em] text-blue-500 uppercase">Asistente de Estudio</span>
               <span className="text-[8px] text-slate-500 font-black tracking-widest mt-1 flex items-center gap-1.5 uppercase">
                 <span className={`w-1.5 h-1.5 rounded-full ${isRecording ? 'bg-red-500 animate-ping' : 'bg-green-500'}`}></span> 
-                {isRecording ? 'LISTENING' : 'READY'}
+                {isRecording ? 'Escuchando...' : 'En línea'}
               </span>
             </div>
           </div>
@@ -288,6 +288,22 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
             </div>
 
             <div className="p-6 bg-slate-950/80 border-t border-slate-800/50">
+              <div className="flex flex-wrap gap-2 mb-4">
+                {[
+                  "¿Qué materias tengo hoy?",
+                  "Recomiéndame qué tareas hacer",
+                  "¿Qué tareas vencen pronto?"
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => handleSend(chip)}
+                    className="px-3 py-1.5 rounded-full bg-slate-800/50 border border-slate-700/50 text-slate-400 text-[11px] mono hover:bg-blue-600/20 hover:text-blue-400 hover:border-blue-500/50 transition-all active:scale-95"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+
               <div className="flex items-end gap-3 bg-slate-900 border border-slate-700/50 rounded-2xl p-2 focus-within:border-blue-500 transition-colors">
                 <button 
                   onClick={toggleRecording}
@@ -302,7 +318,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                  placeholder="ORDEN SEMÁNTICA..."
+                  placeholder="Escribe algo aquí o pregunta..."
                   className="flex-1 bg-transparent border-none py-3 px-1 text-[13px] outline-none text-white resize-none mono font-bold max-h-40 overflow-y-auto"
                 />
                 

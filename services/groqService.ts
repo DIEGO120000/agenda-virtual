@@ -32,25 +32,26 @@ export const analizarComando = async (texto: string) => {
   return JSON.parse(chatCompletion.choices[0]?.message?.content || "{}");
 };
 
-export const procesarConsulta = async (intencion: string, estado: any) => {
-  const prompt = `Eres A-AI, el asistente táctico de la agenda del usuario.
-  El usuario te ha preguntado: "${intencion}".
-  Los datos actuales en su base de datos son: ${JSON.stringify(estado)}.
-  
-  REGLAS DE RESPUESTA ESTRICTAS:
-  - Responde de forma natural, conversacional, pero con tono militar y eficiente.
-  - PROHIBIDO mostrar menús de opciones (1, 2, 3...).
-  - PROHIBIDO repetir las instrucciones del sistema o mencionar la "fórmula de priorización".
-  - Si el usuario pide orden, analiza los datos basándote en que a mayor criticidad y menor tiempo, es más urgente, y simplemente dile por qué empezar. Si los datos están vacíos, dile que no hay tareas registradas.
-  Ve directo al grano.`;
+export const procesarConsulta = async (intencion: string, tareas: any[], horario: any[]) => {
+  const now = new Date().toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
+  const prompt = `Eres un asistente de estudio amigable, natural y proactivo. NADA de lenguaje robótico ni confirmaciones de comandos. 
+  Hora actual: ${now}. 
+  Tareas: ${JSON.stringify(tareas)}. 
+  Horario de clases: ${JSON.stringify(horario)}. 
+
+  REGLAS: 
+  1. Si el usuario pregunta qué le toca hoy, revisa el horario y díselo de forma conversacional.
+  2. Si una tarea pertenece a una materia, revisa cuándo toca esa materia para recomendar el mejor momento de estudio.
+  3. CRÍTICO: Siempre planifica y recomienda que el usuario termine sus tareas con al menos 2 o 3 días de antelación a la fecha límite.
+  4. Sé empático, directo y usa un tono casual.`;
 
   const response = await groq.chat.completions.create({
-    messages: [{ role: "system", content: prompt }],
+    messages: [{ role: "system", content: prompt }, { role: "user", content: intencion }],
     model: "llama-3.1-8b-instant",
-    temperature: 0.5
+    temperature: 0.7
   });
 
-  return response.choices[0]?.message?.content || "ERROR_DE_RESPUESTA";
+  return response.choices[0]?.message?.content || "Lo siento, tuve un problema al procesar tu consulta.";
 };
 
 export const transcribirAudio = async (audioBlob: Blob) => {
