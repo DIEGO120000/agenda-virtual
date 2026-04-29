@@ -53,8 +53,16 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
   const [isRecording, setIsRecording] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [input]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -289,12 +297,13 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
                 </button>
 
                 <textarea
+                  ref={textareaRef}
                   rows={1}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
                   placeholder="ORDEN SEMÁNTICA..."
-                  className="flex-1 bg-transparent border-none py-3 px-1 text-[13px] outline-none text-white resize-none mono font-bold"
+                  className="flex-1 bg-transparent border-none py-3 px-1 text-[13px] outline-none text-white resize-none mono font-bold max-h-40 overflow-y-auto"
                 />
                 
                 <button 
