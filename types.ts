@@ -47,10 +47,16 @@ export interface EventoHorario {
   estadoAncla?: 'Virtual' | 'Presencial';
 }
 
+export interface EntradaCalificacion {
+  id: string;
+  nombre: string;
+  puntos: number;
+}
+
 export interface Calificacion {
+  id: string; // ID vinculado o ID propio
   materia: string;
-  acumulado: number;
-  totalPosible: number;
+  entradas: EntradaCalificacion[];
 }
 
 export interface AppState {

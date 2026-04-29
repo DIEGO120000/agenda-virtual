@@ -7,7 +7,8 @@ import TaskForm from './components/TaskForm';
 import Sections from './components/Sections';
 import ScheduleSection from './components/ScheduleSection';
 import Login from './components/Login';
-import { PlusCircle, Calendar, ClipboardList, Moon, Sun, LogOut, Loader2 } from 'lucide-react';
+import GradesSection from './components/GradesSection';
+import { PlusCircle, Calendar, ClipboardList, Moon, Sun, LogOut, Loader2, Award } from 'lucide-react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './firebase/config';
 import { logout } from './services/auth';
@@ -20,7 +21,8 @@ const App: React.FC = () => {
     tareas: [], 
     notas: [], 
     pasatiempos: [], 
-    horario: [] 
+    horario: [],
+    calificaciones: []
   });
 
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
@@ -36,17 +38,19 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Suscripciones en tiempo real a Firestore (Notas ahora es gestionado por Sections.tsx)
+  // Suscripciones en tiempo real a Firestore
   useEffect(() => {
     if (user) {
       const unsubTareas = subscribeToMyData('tareas', (data) => setState(p => ({ ...p, tareas: data as Tarea[] })));
       const unsubPasatiempos = subscribeToMyData('pasatiempos', (data) => setState(p => ({ ...p, pasatiempos: data as Pasatiempo[] })));
       const unsubHorario = subscribeToMyData('horario', (data) => setState(p => ({ ...p, horario: data as EventoHorario[] })));
+      const unsubCalificaciones = subscribeToMyData('calificaciones', (data) => setState(p => ({ ...p, calificaciones: data as Calificacion[] })));
 
       return () => {
         unsubTareas();
         unsubPasatiempos();
         unsubHorario();
+        unsubCalificaciones();
       };
     }
   }, [user]);
@@ -75,6 +79,34 @@ const App: React.FC = () => {
     try {
       await saveData('tareas', nuevaTarea);
     } catch (err) { console.error("Error al guardar tarea:", err); }
+  };
+
+  const handleAddCalificacion = async (materia: string, entrada: any) => {
+    const existing = state.calificaciones.find(c => c.materia === materia);
+    const newEntrada = { ...entrada, id: crypto.randomUUID() };
+
+    if (existing) {
+      await updateMyData('calificaciones', existing.id, {
+        entradas: [...existing.entradas, newEntrada]
+      });
+    } else {
+      await saveData('calificaciones', {
+        materia,
+        entradas: [newEntrada]
+      });
+    }
+  };
+
+  const handleRemoveCalificacion = async (califId: string, entradaId: string) => {
+    const calif = state.calificaciones.find(c => c.id === califId);
+    if (calif) {
+      const filtered = calif.entradas.filter(e => e.id !== entradaId);
+      if (filtered.length === 0) {
+        await deleteMyData('calificaciones', califId);
+      } else {
+        await updateMyData('calificaciones', califId, { entradas: filtered });
+      }
+    }
   };
 
   const bulkAddTasks = (nuevas: any[]) => {
@@ -193,12 +225,18 @@ const App: React.FC = () => {
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
             <ScheduleSection 
               horario={state.horario} 
               onRemove={(id) => deleteMyData('horario', id)}
               onClear={() => state.horario.forEach(e => deleteMyData('horario', e.id))}
               onUpdate={(id, updates) => updateMyData('horario', id, updates)}
+            />
+            <GradesSection 
+              horario={state.horario}
+              calificaciones={state.calificaciones}
+              onAddEntrada={handleAddCalificacion}
+              onRemoveEntrada={handleRemoveCalificacion}
             />
           </div>
           <div className="space-y-8">

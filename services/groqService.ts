@@ -10,20 +10,22 @@ export const analizarComando = async (texto: string) => {
   const fechaActual = now.toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
   const isoNow = now.toISOString();
 
-  const prompt = `ERES UN CLASIFICADOR ESTRICTO. EVALÚA EL INPUT PASO A PASO:
+  const prompt = `ERES UN CLASIFICADOR Y EDITOR ESTRICTO. EVALÚA EL INPUT PASO A PASO:
   
   REFERENCIA TEMPORAL ABSOLUTA: ${fechaActual} (ISO: ${isoNow}).
   Analiza: "${texto}".
   
-  REGLAS ABSOLUTAS DE CLASIFICACIÓN:
-  1. MATERIAS: Si el usuario dicta una hora de inicio, una hora de fin, un día de la semana y un nombre de asignatura, ES OBLIGATORIAMENTE UNA MATERIA (tipo: "horario").
-  2. TAREAS vs NOTAS: Para que sea una TAREA, el usuario DEBE dictar explícitamente una fecha u hora de culminación exacta.
-  3. REGLA DE ORO: Si identificas una acción pero EL USUARIO NO DICTÓ FECHA DE CULMINACIÓN, ESTÁ ESTRICTAMENTE PROHIBIDO INVENTARLA. En ese caso, DEBES clasificar la entrada como una NOTA (tipo: "nota"). Nunca asumas fechas que no se dijeron explícitamente.
-  4. Si es información general o el tiempo es ambiguo ('esta semana', 'este mes', 'pronto'), CLASIFÍCALO OBLIGATORIAMENTE COMO NOTA.
+  REGLAS ABSOLUTAS DE CLASIFICACIÓN Y EDICIÓN:
+  1. MODIFICACIÓN: Si el usuario pide cambiar, corregir o actualizar algo existente (ej. "cambia la hora de la clase de Matemáticas" o "actualiza la fecha de la tarea X"), DEBES usar el tipo "modificacion". Identifica el objetivo (tareas/notas/horario) y el nombre del registro.
+  2. MATERIAS: Si el usuario dicta una hora de inicio, una hora de fin, un día de la semana y un nombre de asignatura, ES OBLIGATORIAMENTE UNA MATERIA (tipo: "horario").
+  3. TAREAS vs NOTAS: Para que sea una TAREA nueva, el usuario DEBE dictar explícitamente una fecha u hora de culminación exacta.
+  4. REGLA DE ORO: Si identificas una acción pero EL USUARIO NO DICTÓ FECHA DE CULMINACIÓN, ESTÁ ESTRICTAMENTE PROHIBIDO INVENTARLA. Clasifícalo como NOTA.
+  5. Si es información general o el tiempo es ambiguo, CLASIFÍCALO COMO NOTA.
 
   Formato de salida JSON (ESTRICTO):
   {
     "actions": [
+      { "tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "nombre_o_id", "nuevos_datos": { "campo": "valor" } },
       { "tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE" },
       { "tipo": "nota", "texto": "..." },
       { "tipo": "horario", "materia": "...", "dia": "ISO_DATE", "hora": "ISO_DATE", "modalidad": "Virtual/Presencial/Semi" }
