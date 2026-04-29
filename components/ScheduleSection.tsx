@@ -7,10 +7,19 @@ interface Props {
   horario: EventoHorario[];
   onRemove: (id: string) => void;
   onClear: () => void;
+  onUpdate?: (id: string, updates: Partial<EventoHorario>) => void;
 }
 
-const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear }) => {
+const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate }) => {
   const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+  const getWeekNumber = (date: Date) => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  };
+
+  const weekNow = getWeekNumber(new Date());
 
   const normalize = (str: string) => 
     (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -40,17 +49,41 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear }) => {
     }
   };
 
-  const getModalityBadge = (modalidad?: string) => {
+  const getModalityBadge = (evento: EventoHorario) => {
+    const { modalidad, id, semanaAncla, estadoAncla } = evento;
     if (!modalidad) return null;
+
+    if (modalidad === 'Semipresencial') {
+      const ancla = semanaAncla || weekNow;
+      const baseEstado = estadoAncla || 'Presencial';
+      const diff = Math.abs(weekNow - ancla);
+      const currentEstado = diff % 2 === 0 ? baseEstado : (baseEstado === 'Presencial' ? 'Virtual' : 'Presencial');
+      
+      const isVirtual = currentEstado === 'Virtual';
+      const color = isVirtual 
+        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800'
+        : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800';
+
+      return (
+        <button 
+          onClick={() => onUpdate && onUpdate(id, { 
+            semanaAncla: weekNow, 
+            estadoAncla: currentEstado === 'Presencial' ? 'Virtual' : 'Presencial' 
+          })}
+          className={`flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-md border uppercase tracking-wider shadow-sm ml-auto transition-all active:scale-95 ${color}`}
+        >
+          {isVirtual ? <Monitor size={10} /> : <MapPin size={10} />}
+          Semi - {currentEstado}
+        </button>
+      );
+    }
+
     let icon = <Monitor size={10} />;
     let color = 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800'; 
     
     if (modalidad === 'Presencial') {
       icon = <MapPin size={10} />;
       color = 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800'; 
-    } else if (modalidad === 'Semipresencial') {
-      icon = <Users size={10} />;
-      color = 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200 dark:border-orange-800'; 
     }
 
     return (
@@ -121,7 +154,7 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear }) => {
                       </div>
                       
                       <div className="flex items-center gap-4">
-                        {evento.tipo === 'clase' && getModalityBadge(evento.modalidad)}
+                        {evento.tipo === 'clase' && getModalityBadge(evento)}
                         <button 
                           onClick={() => onRemove(evento.id)}
                           className="text-gray-300 dark:text-slate-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"

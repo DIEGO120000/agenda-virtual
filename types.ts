@@ -43,6 +43,8 @@ export interface EventoHorario {
   actividad: string;
   tipo: 'clase' | 'estudio' | 'descanso';
   modalidad?: 'Virtual' | 'Semipresencial' | 'Presencial';
+  semanaAncla?: number;
+  estadoAncla?: 'Virtual' | 'Presencial';
 }
 
 export interface Calificacion {

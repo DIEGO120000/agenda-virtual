@@ -6,31 +6,33 @@ const groq = new Groq({
 });
 
 export const analizarComando = async (texto: string) => {
-  const now = new Date().toISOString();
-  const prompt = `Eres un enrutador de datos multi-intento estricto. La fecha y hora actual exacta del sistema es: ${now}.
+  const now = new Date();
+  const fechaActual = now.toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
+  const isoNow = now.toISOString();
+
+  const prompt = `Eres un enrutador de datos multi-intento estricto. 
+  RECO TOTAL DEL SISTEMA (Referencia absoluta): ${fechaActual} (ISO: ${isoNow}).
   Analiza: "${texto}".
   
-  Si el usuario pide realizar varias acciones (ej. "crea esta tarea y también anota esto"), DEBES generar un arreglo de objetos JSON.
+  REGLAS ABSOLUTAS DE CLASIFICACIÓN:
+  1. MATERIAS (horario): Solo si tiene nombre, días fijos, hora y modalidad. NO tienen fecha de culminación.
+  2. TAREAS: Solo si es una ACCIÓN futura (verbo) Y tiene una FECHA/HORA EXACTA de culminación calculable. Si falta la fecha exacta, NO ES TAREA. NUNCA inventes fechas.
+  3. NOTAS: Si es información general, recordatorios vagos, o el tiempo es ambiguo ('esta semana', 'pronto'), CLASIFÍCALO OBLIGATORIAMENTE COMO NOTA.
+
+  Si el usuario pide realizar varias acciones, genera un arreglo de objetos JSON.
   
   Formato de salida (ESTRICTO):
   {
     "actions": [
       { "tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE" },
-      { "tipo": "nota", "texto": "..." }
+      { "tipo": "nota", "texto": "..." },
+      { "tipo": "horario", "materia": "...", "dia": "ISO_DATE", "hora": "ISO_DATE", "modalidad": "Virtual/Presencial/Semi" }
     ],
-    "respuesta": "Resumen natural y consolidado de TODAS las acciones realizadas. Ej: 'Hecho, ya agregué tus dos tareas para el lunes y guardé la nota sobre José Luis'."
+    "respuesta": "Resumen natural consolidado."
   }
 
-  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo ('culminacion', 'hora', 'dia'), DEBES calcular la fecha real utilizando el contexto actual y devolverla ESTRICTAMENTE en formato ISO 8601 (YYYY-MM-DDTHH:mm:ss).
+  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo, DEBES calcular la fecha real utilizando el contexto de la fecha actual proporcionada (${fechaActual}) y devolverla ESTRICTAMENTE en formato ISO 8601.
 
-  Tipos de acciones soportadas:
-  1. "horario": Materias con días/horas. -> {"tipo": "horario", "materia": "...", "dia": "ISO_DATE", "hora": "ISO_DATE", "modalidad": "..."}
-  2. "tarea": Acciones con TIEMPO LÍMITE. -> {"tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE"}
-  3. "nota": Datos sueltos o tareas SIN tiempo límite. -> {"tipo": "nota", "texto": "..."}
-  4. "consulta": Preguntas sobre la agenda. -> {"tipo": "consulta", "intencion": "..."}
-  5. "modificacion": Peticiones de alterar datos. -> {"tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "id_o_nombre", "nuevos_datos": {}}
-  6. "chat": Saludos o charla simple. -> {"tipo": "chat", "respuesta": "..."}
-  
   Incluso si es una sola acción, usa el formato {"actions": [...], "respuesta": "..."}.
   CERO TEXTO EXTRA. SOLO JSON.`;
 

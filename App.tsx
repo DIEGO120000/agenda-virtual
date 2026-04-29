@@ -198,6 +198,7 @@ const App: React.FC = () => {
               horario={state.horario} 
               onRemove={(id) => deleteMyData('horario', id)}
               onClear={() => state.horario.forEach(e => deleteMyData('horario', e.id))}
+              onUpdate={(id, updates) => updateMyData('horario', id, updates)}
             />
           </div>
           <div className="space-y-8">
