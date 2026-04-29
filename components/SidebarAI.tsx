@@ -120,7 +120,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
         }
 
         case 'consulta':
-          aiText = await procesarConsulta(resultado.intencion, state.tareas, state.horario);
+          aiText = await procesarConsulta(resultado.intencion, state.tareas, state.horario, state.notas, state.pasatiempos);
           break;
 
         case 'horario':
@@ -169,10 +169,11 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
           break;
 
         default:
-          aiText = await procesarConsulta(trimmedInput, state.tareas, state.horario);
+          aiText = await procesarConsulta(trimmedInput, state.tareas, state.horario, state.notas, state.pasatiempos);
       }
 
-      const finalMsg = (resultado.tipo === 'consulta' || resultado.tipo === 'chat' || !resultado.tipo) ? aiText : `Hecho: ${aiText}`;
+      const isDataAction = ['modificacion', 'horario', 'tarea', 'nota'].includes(resultado.tipo);
+      const finalMsg = isDataAction ? `Hecho: ${aiText}` : aiText;
       setMessages(prev => [...prev, { role: 'ai', text: finalMsg }]);
     } catch (error: any) {
       setMessages(prev => [...prev, { role: 'error', text: `Lo siento, hubo un problema: ${error.message}` }]);

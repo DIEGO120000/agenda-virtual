@@ -32,18 +32,26 @@ export const analizarComando = async (texto: string) => {
   return JSON.parse(chatCompletion.choices[0]?.message?.content || "{}");
 };
 
-export const procesarConsulta = async (intencion: string, tareas: any[], horario: any[]) => {
+export const procesarConsulta = async (intencion: string, tareas: any[], horario: any[], notas: any[], pasatiempos: any[]) => {
   const now = new Date().toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
-  const prompt = `Eres un asistente de estudio amigable, natural y proactivo. NADA de lenguaje robótico ni menciones a "comandos" o "sistemas". 
-  Hora actual: ${now}. 
-  Tareas: ${JSON.stringify(tareas)}. 
-  Horario de clases: ${JSON.stringify(horario)}. 
 
-  REGLAS: 
-  1. Si el usuario pregunta qué le toca hoy, revisa el horario y díselo de forma conversacional.
-  2. Si una tarea pertenece a una materia, revisa cuándo toca esa materia para recomendar el mejor momento de estudio.
-  3. CRÍTICO: Siempre planifica y recomienda que el usuario termine sus tareas con al menos 2 o 3 días de antelación a la fecha límite.
-  4. Sé empático, directo y usa un tono casual. NUNCA uses la palabra "comando".`;
+  const formatList = (list: any[], key: string) => {
+    if (!list || list.length === 0) return "Vacío/No asignado";
+    return JSON.stringify(list);
+  };
+
+  const prompt = `Eres el asistente de la Agenda Virtual. Tienes acceso a toda la información del usuario.
+  DATOS ACTUALES:
+  - Tareas: ${formatList(tareas, 'tareas')}
+  - Horario: ${formatList(horario, 'horario')}
+  - Notas: ${formatList(notas, 'notas')}
+  - Pasatiempos: ${formatList(pasatiempos, 'pasatiempos')}
+
+  REGLAS CRÍTICAS:
+  1. Si el usuario pregunta por una sección que está vacía, infórmale de manera natural que aún no ha agregado nada ahí. NO inventes datos.
+  2. PROHIBICIÓN ABSOLUTA: NUNCA crees, asignes ni simules crear una tarea por tu cuenta. SOLO debes crear una tarea si el usuario te lo ordena explícitamente (ej. 'crea una tarea para...'). 
+  3. Si el usuario responde con un simple 'sí' o 'no' a una de tus preguntas, responde conversacionalmente basándote en el contexto. NUNCA respondas con el formato 'Hecho: TAREA ASIGNADA' a menos que haya una orden directa.
+  4. Sé empático, directo y usa un tono casual. Hora actual: ${now}.`;
 
   const response = await groq.chat.completions.create({
     messages: [{ role: "system", content: prompt }, { role: "user", content: intencion }],
