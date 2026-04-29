@@ -66,7 +66,6 @@ const AuthCard: React.FC = () => {
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
               type="email" 
-              placeholder="TU@CORREO.COM" 
               className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-4 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700 uppercase"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -78,7 +77,6 @@ const AuthCard: React.FC = () => {
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
               type={showPassword ? "text" : "password"} 
-              placeholder="CONTRASEÑA" 
               className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-12 py-5 rounded-2xl text-[11px] font-black outline-none focus:border-blue-500 transition-all placeholder:text-slate-700"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
