@@ -97,84 +97,86 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
 
     try {
       const resultado = await analizarComando(trimmedInput);
-      let aiText = "";
+      const acciones = resultado.actions || [resultado];
+      
+      // Procesamiento Secuencial de Acciones (Multi-Intento)
+      for (const accion of acciones) {
+        switch (accion.tipo) {
+          case 'modificacion': {
+            const collectionName = accion.objetivo === 'horario' ? 'horario' : 
+                                  accion.objetivo === 'tareas' ? 'tareas' : 'notas';
+            
+            const collectionData = state[accion.objetivo as keyof AppState] as any[];
+            const target = collectionData.find((item: any) => 
+              item.id === accion.identificador || 
+              (item.nombre || item.actividad || item.materia || item.contenido)?.toLowerCase().includes(String(accion.identificador).toLowerCase())
+            );
 
-      switch (resultado.tipo) {
-        case 'modificacion': {
-          const collectionName = resultado.objetivo === 'horario' ? 'horario' : 
-                                resultado.objetivo === 'tareas' ? 'tareas' : 'notas';
-          
-          const collectionData = state[resultado.objetivo as keyof AppState] as any[];
-          const target = collectionData.find((item: any) => 
-            item.id === resultado.identificador || 
-            (item.nombre || item.actividad || item.materia || item.contenido)?.toLowerCase().includes(String(resultado.identificador).toLowerCase())
-          );
-
-          if (target) {
-            await updateMyData(collectionName, target.id, resultado.nuevos_datos);
-            aiText = `ACTUALIZACIÓN EXITOSA // ${resultado.objetivo.toUpperCase()}: ${target.id} MODIFICADO.`;
-          } else {
-            aiText = `ERROR: NO SE ENCONTRÓ EL OBJETIVO "${resultado.identificador}" EN ${resultado.objetivo.toUpperCase()}.`;
+            if (target) {
+              await updateMyData(collectionName, target.id, accion.nuevos_datos);
+            }
+            break;
           }
-          break;
+
+          case 'horario':
+            await saveData('horario', {
+              actividad: accion.materia?.toUpperCase() || "MATERIA",
+              dia: accion.dia,
+              hora: accion.hora,
+              modalidad: accion.modalidad || "Presencial",
+              tipo: 'clase'
+            });
+            break;
+
+          case 'tarea': {
+            const fechaIngreso = new Date();
+            const parsedCulm = new Date(accion.culminacion);
+            const fechaCulminacion = isNaN(parsedCulm.getTime()) 
+              ? new Date(new Date().setHours(23, 59, 59)) 
+              : parsedCulm;
+            
+            const fechaRecomendado = new Date(fechaIngreso.getTime() + (fechaCulminacion.getTime() - fechaIngreso.getTime()) / 2);
+
+            await saveData('tareas', {
+              nombre: accion.tarea,
+              ingreso: fechaIngreso.toISOString(),
+              recomendado: fechaRecomendado.toISOString(),
+              culminacion: fechaCulminacion.toISOString(),
+              criticidad: 5,
+              estado: EstadoTarea.PENDIENTE,
+              prioridad: PrioridadTarea.MEDIA
+            });
+            break;
+          }
+
+          case 'nota':
+            await saveData('notas', {
+              contenido: accion.texto || trimmedInput,
+              timestamp: new Date().toISOString()
+            });
+            break;
         }
-
-        case 'consulta':
-          aiText = await procesarConsulta(resultado.intencion, state.tareas, state.horario, state.notas, state.pasatiempos);
-          break;
-
-        case 'horario':
-          await saveData('horario', {
-            actividad: resultado.materia?.toUpperCase() || "MATERIA",
-            dia: resultado.dia,
-            hora: resultado.hora,
-            modalidad: resultado.modalidad || "Presencial",
-            tipo: 'clase'
-          });
-          aiText = `MATERIA REGISTRADA: ${resultado.materia} // DÍA: ${resultado.dia} // HORA: ${resultado.hora}.`;
-          break;
-
-        case 'tarea': {
-          const fechaIngreso = new Date();
-          const parsedCulm = new Date(resultado.culminacion);
-          const fechaCulminacion = isNaN(parsedCulm.getTime()) 
-            ? new Date(new Date().setHours(23, 59, 59)) 
-            : parsedCulm;
-          
-          const fechaRecomendado = new Date(fechaIngreso.getTime() + (fechaCulminacion.getTime() - fechaIngreso.getTime()) / 2);
-
-          await saveData('tareas', {
-            nombre: resultado.tarea,
-            ingreso: fechaIngreso.toISOString(),
-            recomendado: fechaRecomendado.toISOString(),
-            culminacion: fechaCulminacion.toISOString(),
-            criticidad: 5,
-            estado: EstadoTarea.PENDIENTE,
-            prioridad: PrioridadTarea.MEDIA
-          });
-          aiText = `TAREA ASIGNADA: ${resultado.tarea} // CULMINACIÓN: ${fechaCulminacion.toISOString()} // RECOMENDADO: ${fechaRecomendado.toISOString()}.`;
-          break;
-        }
-
-        case 'nota':
-          await saveData('notas', {
-            contenido: resultado.texto || trimmedInput,
-            timestamp: new Date().toISOString()
-          });
-          aiText = `NOTA CAPTURADA: "${resultado.texto || trimmedInput}" // ALMACENADA EN MEMORIA CENTRAL.`;
-          break;
-
-        case 'chat':
-          aiText = resultado.respuesta;
-          break;
-
-        default:
-          aiText = await procesarConsulta(trimmedInput, state.tareas, state.horario, state.notas, state.pasatiempos);
       }
 
-      const isDataAction = ['modificacion', 'horario', 'tarea', 'nota'].includes(resultado.tipo);
-      const finalMsg = isDataAction ? `Hecho: ${aiText}` : aiText;
-      setMessages(prev => [...prev, { role: 'ai', text: finalMsg }]);
+      // Determinar respuesta final consolidada
+      let aiText = resultado.respuesta;
+
+      if (!aiText) {
+        const consulta = acciones.find((a: any) => a.tipo === 'consulta');
+        const chat = acciones.find((a: any) => a.tipo === 'chat');
+        
+        if (consulta) {
+          aiText = await procesarConsulta(consulta.intencion, state.tareas, state.horario, state.notas, state.pasatiempos);
+        } else if (chat) {
+          aiText = chat.respuesta;
+        } else if (acciones.length > 0) {
+          aiText = "Entendido, he procesado todas tus solicitudes correctamente.";
+        } else {
+          aiText = await procesarConsulta(trimmedInput, state.tareas, state.horario, state.notas, state.pasatiempos);
+        }
+      }
+
+      setMessages(prev => [...prev, { role: 'ai', text: aiText }]);
     } catch (error: any) {
       setMessages(prev => [...prev, { role: 'error', text: `Lo siento, hubo un problema: ${error.message}` }]);
     } finally {

@@ -7,19 +7,31 @@ const groq = new Groq({
 
 export const analizarComando = async (texto: string) => {
   const now = new Date().toISOString();
-  const prompt = `Eres un enrutador de datos estricto. La fecha y hora actual exacta del sistema es: ${now}.
+  const prompt = `Eres un enrutador de datos multi-intento estricto. La fecha y hora actual exacta del sistema es: ${now}.
   Analiza: "${texto}".
   
-  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo ('culminacion', 'hora', 'dia'), DEBES calcular la fecha real utilizando el contexto actual y devolverla ESTRICTAMENTE en formato ISO 8601 (YYYY-MM-DDTHH:mm:ss). NUNCA devuelvas palabras como "mañana", "hoy" o "a las 12". Mapea siempre a la fecha ISO correspondiente.
+  Si el usuario pide realizar varias acciones (ej. "crea esta tarea y también anota esto"), DEBES generar un arreglo de objetos JSON.
+  
+  Formato de salida (ESTRICTO):
+  {
+    "actions": [
+      { "tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE" },
+      { "tipo": "nota", "texto": "..." }
+    ],
+    "respuesta": "Resumen natural y consolidado de TODAS las acciones realizadas. Ej: 'Hecho, ya agregué tus dos tareas para el lunes y guardé la nota sobre José Luis'."
+  }
 
-  Devuelve SOLO un JSON válido según estas reglas:
+  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo ('culminacion', 'hora', 'dia'), DEBES calcular la fecha real utilizando el contexto actual y devolverla ESTRICTAMENTE en formato ISO 8601 (YYYY-MM-DDTHH:mm:ss).
+
+  Tipos de acciones soportadas:
   1. "horario": Materias con días/horas. -> {"tipo": "horario", "materia": "...", "dia": "ISO_DATE", "hora": "ISO_DATE", "modalidad": "..."}
-  2. "tarea": Acciones con TIEMPO LÍMITE explícito. -> {"tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE"}
+  2. "tarea": Acciones con TIEMPO LÍMITE. -> {"tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE"}
   3. "nota": Datos sueltos o tareas SIN tiempo límite. -> {"tipo": "nota", "texto": "..."}
   4. "consulta": Preguntas sobre la agenda. -> {"tipo": "consulta", "intencion": "..."}
   5. "modificacion": Peticiones de alterar datos. -> {"tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "id_o_nombre", "nuevos_datos": {}}
-  6. "chat": Saludos simples. -> {"tipo": "chat", "respuesta": "..."}
+  6. "chat": Saludos o charla simple. -> {"tipo": "chat", "respuesta": "..."}
   
+  Incluso si es una sola acción, usa el formato {"actions": [...], "respuesta": "..."}.
   CERO TEXTO EXTRA. SOLO JSON.`;
 
   const chatCompletion = await groq.chat.completions.create({
