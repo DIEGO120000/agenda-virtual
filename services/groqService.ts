@@ -17,10 +17,21 @@ export const analizarComando = async (texto: string) => {
   
   REGLAS ABSOLUTAS DE CLASIFICACIÓN Y EDICIÓN:
   1. PRIORIDAD DE MATERIAS: Cuando el usuario te dicte sus materias, días, horas y profesores (ej. "estas son mis materias..."), tu ÚNICA acción estructural debe ser agregarlas o actualizarlas en la sección de HORARIO/MATERIAS (tipo: "horario"). NUNCA las agregues directamente a calificaciones.
-  2. MODIFICACIÓN: Si el usuario pide cambiar, corregir o actualizar algo existente (ej. "cambia la hora de la clase de Matemáticas" o "actualiza la fecha de la tarea X"), DEBES usar el tipo "modificacion". Identifica el objetivo (tareas/notas/horario) y el nombre del registro.
-  3. MATERIAS: Si el usuario dicta una hora de inicio, una hora de fin, un día de la semana y un nombre de asignatura, ES OBLIGATORIAMENTE UNA MATERIA (tipo: "horario").
+  
+  2. ESQUEMA ESTRICTO PARA MATERIAS (HORARIO): Cuando detectes una materia, DEBES devolver un objeto JSON con EXACTAMENTE estas claves:
+     - "dia": El día de la semana explícito (Ej. "Lunes", "Martes", "Sábado"). Si dice "Autogestionada" o "Pendiente", pon "Pendiente". ESTÁ ESTRICTAMENTE PROHIBIDO omitir el campo "dia".
+     - "hora_inicio": La hora exacta de inicio (Ej. "8:00 AM").
+     - "hora_fin": La hora exacta de fin (Ej. "11:00 AM").
+     - "nombre": El nombre de la materia sin asteriscos.
+     - "profesor": El nombre del profesor.
+     - "modalidad": "Virtual", "Presencial" o "Semipresencial".
+
+  3. MODIFICACIÓN: Si el usuario pide cambiar, corregir o actualizar algo existente (ej. "cambia la hora de la clase de Matemáticas" o "actualiza la fecha de la tarea X"), DEBES usar el tipo "modificacion". Identifica el objetivo (tareas/notas/horario) y el nombre del registro.
+  
   4. TAREAS vs NOTAS: Para que sea una TAREA nueva, el usuario DEBE dictar explícitamente una fecha u hora de culminación exacta.
+  
   5. REGLA DE ORO: Si identificas una acción pero EL USUARIO NO DICTÓ FECHA DE CULMINACIÓN, ESTÁ ESTRICTAMENTE PROHIBIDO INVENTARLA. Clasifícalo como NOTA (tipo: "nota").
+  
   6. Si es información general o el tiempo es ambiguo, CLASIFÍCALO COMO NOTA.
 
   Formato de salida JSON (ESTRICTO):
@@ -29,12 +40,12 @@ export const analizarComando = async (texto: string) => {
       { "tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "nombre_o_id", "nuevos_datos": { "campo": "valor" } },
       { "tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE" },
       { "tipo": "nota", "texto": "..." },
-      { "tipo": "horario", "materia": "...", "dia": "ISO_DATE", "hora": "ISO_DATE", "modalidad": "Virtual/Presencial/Semi" }
+      { "tipo": "horario", "dia": "...", "hora_inicio": "...", "hora_fin": "...", "nombre": "...", "profesor": "...", "modalidad": "..." }
     ],
     "respuesta": "Resumen natural consolidado de las acciones realizadas."
   }
 
-  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo, DEBES calcular la fecha real utilizando el contexto de la fecha actual proporcionada y devolverla ESTRICTAMENTE en formato ISO 8601.
+  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo (fuera de horario), DEBES calcular la fecha real utilizando el contexto de la fecha actual proporcionada y devolverla ESTRICTAMENTE en formato ISO 8601.
 
   CERO TEXTO EXTRA. SOLO JSON.`;
 

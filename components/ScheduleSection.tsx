@@ -92,17 +92,21 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
 
   // LÓGICA DE AGRUPACIÓN ANTI-CRASH (100% VISIBILIDAD)
   const groupedHorario = horario.reduce((acc, evento) => {
-    const diaNorm = normalize(evento.dia || "");
-    const diaReal = dias.find(d => normalize(d) === diaNorm) || "DÍA NO ESPECIFICADO";
-    if (!acc[diaReal]) acc[diaReal] = [];
-    acc[diaReal].push(evento);
+    const rawDia = evento.dia || "";
+    const diaNorm = normalize(rawDia);
+    // Encontrar el nombre canónico (ej. 'Lunes') o usar el original si no coincide
+    const diaCanonico = dias.find(d => normalize(d) === diaNorm) || (rawDia.trim() || "DÍA NO ESPECIFICADO");
+    
+    const diaKey = diaCanonico.toUpperCase();
+    if (!acc[diaKey]) acc[diaKey] = [];
+    acc[diaKey].push(evento);
     return acc;
   }, {} as Record<string, EventoHorario[]>);
 
-  // Ordenar días (días estándar primero, luego 'no especificado')
+  // Ordenar las llaves (Días de la semana primero, luego otros)
   const sortedDayNames = Object.keys(groupedHorario).sort((a, b) => {
-    const idxA = dias.indexOf(a);
-    const idxB = dias.indexOf(b);
+    const idxA = dias.findIndex(d => d.toUpperCase() === a);
+    const idxB = dias.findIndex(d => d.toUpperCase() === b);
     if (idxA === -1 && idxB === -1) return a.localeCompare(b);
     if (idxA === -1) return 1;
     if (idxB === -1) return -1;
