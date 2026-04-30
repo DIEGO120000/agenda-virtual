@@ -127,97 +127,126 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
             <p className="text-gray-400 dark:text-slate-500 text-sm italic max-w-[250px]">Pega tu horario académico en el chat para que el sistema lo procese automáticamente.</p>
           </div>
         ) : (
-          dias.map(dia => {
-            const normDia = normalize(dia);
-            const eventosDelDia = horario
-              .filter(e => normalize(e.dia || "") === normDia)
-              .sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
+          <>
+            {dias.map(dia => {
+              const normDia = normalize(dia);
+              const eventosDelDia = horario
+                .filter(e => normalize(e.dia || "") === normDia)
+                .sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
 
-            if (eventosDelDia.length === 0) return null;
+              if (eventosDelDia.length === 0) return null;
 
-            return (
-              <div key={dia} className="space-y-2">
-                <h3 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase border-b border-gray-100 dark:border-slate-800 pb-1 tracking-widest">{dia}</h3>
-                <div className="grid gap-2">
-                  {eventosDelDia.map(evento => {
-                    const isEditing = editingId === evento.id;
-                    return (
-                      <div 
-                        key={evento.id} 
-                        className={`flex items-center justify-between p-3 rounded-xl border group transition-all duration-200 hover:shadow-md ${
-                          evento.tipo === 'clase' ? 'bg-blue-50/40 dark:bg-blue-900/5 border-blue-100 dark:border-blue-900/20' : 
-                          evento.tipo === 'estudio' ? 'bg-purple-50/40 dark:bg-purple-900/5 border-purple-100 dark:border-purple-900/20' :
-                          'bg-orange-50/40 dark:bg-orange-900/5 border-orange-100 dark:border-orange-900/20'
-                        }`}
-                      >
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="flex flex-col items-center justify-center min-w-[85px] font-mono text-[9px] font-bold text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-lg border border-gray-100 dark:border-slate-700 shadow-sm">
-                            <span className="text-gray-800 dark:text-white whitespace-nowrap">{formatToAmPm(evento.hora)}</span>
-                            <div className="w-full h-[1px] bg-gray-100 dark:bg-slate-700 my-0.5"></div>
-                            <span className="text-gray-400 dark:text-slate-500 whitespace-nowrap">{formatToAmPm(evento.horaFin)}</span>
+              return (
+                <div key={dia} className="space-y-2">
+                  <h3 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase border-b border-gray-100 dark:border-slate-800 pb-1 tracking-widest">{dia}</h3>
+                  <div className="grid gap-2">
+                    {eventosDelDia.map(evento => {
+                      const isEditing = editingId === evento.id;
+                      return (
+                        <div 
+                          key={evento.id} 
+                          className={`flex items-center justify-between p-3 rounded-xl border group transition-all duration-200 hover:shadow-md ${
+                            evento.tipo === 'clase' ? 'bg-blue-50/40 dark:bg-blue-900/5 border-blue-100 dark:border-blue-900/20' : 
+                            evento.tipo === 'estudio' ? 'bg-purple-50/40 dark:bg-purple-900/5 border-purple-100 dark:border-purple-900/20' :
+                            'bg-orange-50/40 dark:bg-orange-900/5 border-orange-100 dark:border-orange-900/20'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4 flex-1">
+                            <div className="flex flex-col items-center justify-center min-w-[85px] font-mono text-[9px] font-bold text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-lg border border-gray-100 dark:border-slate-700 shadow-sm">
+                              <span className="text-gray-800 dark:text-white whitespace-nowrap">{formatToAmPm(evento.hora)}</span>
+                              <div className="w-full h-[1px] bg-gray-100 dark:bg-slate-700 my-0.5"></div>
+                              <span className="text-gray-400 dark:text-slate-500 whitespace-nowrap">{formatToAmPm(evento.horaFin)}</span>
+                            </div>
+                            <div className="flex flex-col flex-1">
+                              <div className="flex items-center gap-2">
+                                {getIcon(evento.tipo)}
+                                {isEditing ? (
+                                  <input 
+                                    type="text" 
+                                    value={editValues.actividad} 
+                                    onChange={(e) => setEditValues({...editValues, actividad: e.target.value})}
+                                    className="bg-white dark:bg-slate-800 border border-blue-500 rounded px-2 py-0.5 text-xs outline-none w-full"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-bold text-gray-800 dark:text-slate-100">{evento.actividad}</span>
+                                )}
+                              </div>
+                              <span className="text-[9px] text-gray-400 dark:text-slate-500 uppercase font-semibold tracking-tighter mt-0.5">
+                                {evento.tipo === 'clase' ? 'Sesión Universitaria' : evento.tipo === 'estudio' ? 'Foco de Estudio' : 'Recuperación'}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex flex-col flex-1">
-                            <div className="flex items-center gap-2">
-                              {getIcon(evento.tipo)}
+                          
+                          <div className="flex items-center gap-4">
+                            {isEditing && evento.tipo === 'clase' ? (
+                              <select 
+                                value={editValues.modalidad}
+                                onChange={(e) => setEditValues({...editValues, modalidad: e.target.value as any})}
+                                className="bg-white dark:bg-slate-800 border border-blue-500 rounded text-[9px] p-1 font-bold"
+                              >
+                                <option value="Virtual">Virtual</option>
+                                <option value="Presencial">Presencial</option>
+                                <option value="Semipresencial">Semipresencial</option>
+                              </select>
+                            ) : (
+                              evento.tipo === 'clase' && getModalityBadge(evento)
+                            )}
+                            
+                            <div className="flex items-center gap-1">
                               {isEditing ? (
-                                <input 
-                                  type="text" 
-                                  value={editValues.actividad} 
-                                  onChange={(e) => setEditValues({...editValues, actividad: e.target.value})}
-                                  className="bg-white dark:bg-slate-800 border border-blue-500 rounded px-2 py-0.5 text-xs outline-none w-full"
-                                />
+                                <>
+                                  <button onClick={() => saveEdit(evento.id)} className="text-blue-500 hover:text-blue-600"><Save size={16} /></button>
+                                  <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-red-500"><X size={16} /></button>
+                                </>
                               ) : (
-                                <span className="text-sm font-bold text-gray-800 dark:text-slate-100">{evento.actividad}</span>
+                                <>
+                                  <button onClick={() => startEditing(evento)} className="text-gray-300 dark:text-slate-700 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all p-1"><Edit2 size={16} /></button>
+                                  <button 
+                                    onClick={() => onRemove(evento.id)}
+                                    className="text-gray-300 dark:text-slate-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                    title="Remover evento"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </>
                               )}
                             </div>
-                            <span className="text-[9px] text-gray-400 dark:text-slate-500 uppercase font-semibold tracking-tighter mt-0.5">
-                              {evento.tipo === 'clase' ? 'Sesión Universitaria' : evento.tipo === 'estudio' ? 'Foco de Estudio' : 'Recuperación'}
-                            </span>
                           </div>
                         </div>
-                        
-                        <div className="flex items-center gap-4">
-                          {isEditing && evento.tipo === 'clase' ? (
-                            <select 
-                              value={editValues.modalidad}
-                              onChange={(e) => setEditValues({...editValues, modalidad: e.target.value as any})}
-                              className="bg-white dark:bg-slate-800 border border-blue-500 rounded text-[9px] p-1 font-bold"
-                            >
-                              <option value="Virtual">Virtual</option>
-                              <option value="Presencial">Presencial</option>
-                              <option value="Semipresencial">Semipresencial</option>
-                            </select>
-                          ) : (
-                            evento.tipo === 'clase' && getModalityBadge(evento)
-                          )}
-                          
-                          <div className="flex items-center gap-1">
-                            {isEditing ? (
-                              <>
-                                <button onClick={() => saveEdit(evento.id)} className="text-blue-500 hover:text-blue-600"><Save size={16} /></button>
-                                <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-red-500"><X size={16} /></button>
-                              </>
-                            ) : (
-                              <>
-                                <button onClick={() => startEditing(evento)} className="text-gray-300 dark:text-slate-700 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all p-1"><Edit2 size={16} /></button>
-                                <button 
-                                  onClick={() => onRemove(evento.id)}
-                                  className="text-gray-300 dark:text-slate-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
-                                  title="Remover evento"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+
+            {/* Auditoría de Datos: Mostrar eventos sin día válido */}
+            {(() => {
+              const standardDays = dias.map(d => normalize(d));
+              const extraEvents = horario.filter(e => !standardDays.includes(normalize(e.dia || "")));
+              
+              if (extraEvents.length === 0) return null;
+
+              return (
+                <div className="mt-8 pt-4 border-t border-dashed border-gray-200 dark:border-slate-800">
+                  <h3 className="text-[10px] font-black text-red-400 dark:text-red-500/50 uppercase pb-1 tracking-widest flex items-center gap-2">
+                    ⚠️ Otros / Sin Clasificar (Audit Data)
+                  </h3>
+                  <div className="grid gap-2 opacity-80">
+                    {extraEvents.map(evento => (
+                      <div key={evento.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50">
+                        <div className="flex items-center gap-4">
+                          <span className="text-[9px] font-mono font-bold bg-white dark:bg-slate-800 px-2 py-1 rounded border border-gray-100 dark:border-slate-700">{evento.dia || 'S/D'}</span>
+                          <span className="text-xs font-bold text-gray-500">{evento.actividad}</span>
+                        </div>
+                        <button onClick={() => onRemove(evento.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </>
         )}
       </div>
       <div className="p-3 bg-gray-50 dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-800 flex items-center justify-center gap-2">

@@ -266,12 +266,11 @@ const App: React.FC = () => {
               onAddEntrada={handleAddCalificacion}
               onRemoveEntrada={handleRemoveCalificacion}
             />
-          </div>
-          <div className="space-y-8">
             <Sections 
               pasatiempos={state.pasatiempos}
               addNota={addNota}
               removeNota={(id) => deleteMyData('notas', id)}
+              updateNota={(id, content) => updateMyData('notas', id, { contenido: content })}
               addPasatiempo={addPasatiempo}
               togglePasatiempo={(id) => {
                 const p = state.pasatiempos.find(x => x.id === id);
@@ -279,6 +278,9 @@ const App: React.FC = () => {
               }}
               removePasatiempo={(id) => deleteMyData('pasatiempos', id)}
             />
+          </div>
+          <div className="space-y-8">
+            {/* Espacio lateral para futuros widgets o información secundaria */}
           </div>
         </div>
       </main>
