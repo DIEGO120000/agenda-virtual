@@ -32,6 +32,7 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
 
   const formatToAmPm = (time24: string) => {
     if (!time24 || typeof time24 !== 'string' || !time24.includes(':')) return time24 || '';
+    if (time24 === '--') return '--';
     try {
       if (time24.toUpperCase().includes('AM') || time24.toUpperCase().includes('PM')) return time24;
       const parts = time24.split(':');
@@ -46,6 +47,24 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
     }
   };
 
+  const timeToMinutes = (timeStr: string) => {
+    if (!timeStr || timeStr === '--') return 9999;
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const period = match[3].toUpperCase();
+      if (period === 'PM' && h < 12) h += 12;
+      if (period === 'AM' && h === 12) h = 0;
+      return h * 60 + m;
+    }
+    const parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    }
+    return 9999;
+  };
+
   const getModalityBadge = (evento: EventoHorario) => {
     const { modalidad, semiAnchorWeek, semiAnchorState } = evento;
     if (!modalidad) return null;
@@ -55,7 +74,6 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
       const anclaEstado = semiAnchorState || 'Presencial';
       const diff = Math.abs(weekNow - anclaSemana);
       const currentEstado = diff % 2 === 0 ? anclaEstado : (anclaEstado === 'Presencial' ? 'Virtual' : 'Presencial');
-
       const isVirtual = currentEstado === 'Virtual';
 
       return (
@@ -71,8 +89,16 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
       );
     }
 
+    if (modalidad === 'Autogestionada') {
+      return (
+        <div className="bg-purple-600 text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-black/20">
+          <Clock size={12} /> AUTOGESTIONADA
+        </div>
+      );
+    }
+
     const isVirtual = modalidad === 'Virtual';
-    const bgColor = isVirtual ? 'bg-green-500' : 'bg-orange-500';
+    const bgColor = isVirtual ? 'bg-green-500' : 'bg-red-500';
     const label = isVirtual ? 'VIRTUAL' : 'SESIÓN PRESENCIAL';
 
     return (
@@ -81,9 +107,9 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
         {label}
       </div>
     );
-  };
+    };
 
-  const startEditing = (evento: EventoHorario) => {
+    const startEditing = (evento: EventoHorario) => {
     setEditingId(evento.id);
     setEditValues({ 
       actividad: evento.actividad, 
@@ -94,19 +120,24 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
       profesor: evento.profesor || "Pendiente",
       semiAnchorState: evento.semiAnchorState || "Presencial"
     });
-  };
+    };
 
-  const saveEdit = (id: string) => {
+    const saveEdit = (id: string) => {
     const finalUpdates = { ...editValues };
     if (finalUpdates.modalidad === 'Semipresencial') {
       finalUpdates.semiAnchorWeek = weekNow;
     }
+    if (finalUpdates.modalidad === 'Autogestionada') {
+      finalUpdates.dia = "Autogestionada";
+      finalUpdates.hora = "--";
+      finalUpdates.horaFin = "--";
+    }
     if (onUpdate) onUpdate(id, finalUpdates);
     setEditingId(null);
-  };
+    };
 
-  // LÓGICA DE AGRUPACIÓN ANTI-CRASH (100% VISIBILIDAD)
-  const groupedHorario = horario.reduce((acc, evento) => {
+    // LÓGICA DE AGRUPACIÓN ANTI-CRASH (100% VISIBILIDAD)
+    const groupedHorario = horario.reduce((acc, evento) => {
     const rawDia = evento.dia || "";
     const diaNorm = normalize(rawDia);
     const diaCanonico = dias.find(d => normalize(d) === diaNorm) || (rawDia.trim() || "DÍA NO ESPECIFICADO");
@@ -114,18 +145,18 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
     if (!acc[diaKey]) acc[diaKey] = [];
     acc[diaKey].push(evento);
     return acc;
-  }, {} as Record<string, EventoHorario[]>);
+    }, {} as Record<string, EventoHorario[]>);
 
-  const sortedDayNames = Object.keys(groupedHorario).sort((a, b) => {
+    const sortedDayNames = Object.keys(groupedHorario).sort((a, b) => {
     const idxA = dias.findIndex(d => d.toUpperCase() === a);
     const idxB = dias.findIndex(d => d.toUpperCase() === b);
     if (idxA === -1 && idxB === -1) return a.localeCompare(b);
     if (idxA === -1) return 1;
     if (idxB === -1) return -1;
     return idxA - idxB;
-  });
+    });
 
-  return (
+    return (
     <section id="schedule-section" className="bg-transparent overflow-hidden flex flex-col h-fit min-h-[200px] py-4">
       <div className="flex items-center justify-between mb-8 px-4">
         <div className="flex items-center gap-4">
@@ -152,7 +183,8 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
           </div>
         ) : (
           sortedDayNames.map(dia => {
-            const eventosDelDia = groupedHorario[dia].sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
+            // ORDENAMIENTO CRONOLÓGICO POR DÍA
+            const eventosDelDia = groupedHorario[dia].sort((a, b) => timeToMinutes(a.hora) - timeToMinutes(b.hora));
 
             return (
               <div key={dia} className="animate-in fade-in slide-in-from-left duration-700 px-4">
@@ -162,6 +194,8 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                 <div className="space-y-4">
                   {eventosDelDia.map(evento => {
                     const isEditing = editingId === evento.id;
+                    const isAutogestionada = editValues.modalidad === 'Autogestionada';
+
                     return (
                       <div 
                         key={evento.id} 
@@ -176,21 +210,27 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                                   type="time" 
                                   value={editValues.hora} 
                                   onChange={(e) => setEditValues({...editValues, hora: e.target.value})}
-                                  className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none"
+                                  disabled={isAutogestionada}
+                                  className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none disabled:opacity-30"
                                 />
                                 <input 
                                   type="time" 
                                   value={editValues.horaFin} 
                                   onChange={(e) => setEditValues({...editValues, horaFin: e.target.value})}
-                                  className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none"
+                                  disabled={isAutogestionada}
+                                  className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none disabled:opacity-30"
                                 />
                               </div>
                             ) : (
-                              <>
-                                <span className="text-white font-black text-sm">{formatToAmPm(evento.hora)}</span>
-                                <div className="w-8 h-[1px] bg-white/10 my-2"></div>
-                                <span className="text-white/40 font-bold text-xs">{formatToAmPm(evento.horaFin)}</span>
-                              </>
+                              evento.modalidad === 'Autogestionada' ? (
+                                <span className="text-white/20 font-black text-xs uppercase tracking-tighter">Sin horario fijo</span>
+                              ) : (
+                                <>
+                                  <span className="text-white font-black text-sm">{formatToAmPm(evento.hora)}</span>
+                                  <div className="w-8 h-[1px] bg-white/10 my-2"></div>
+                                  <span className="text-white/40 font-bold text-xs">{formatToAmPm(evento.horaFin)}</span>
+                                </>
+                              )
                             )}
                           </div>
 
@@ -211,9 +251,11 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                                     <select 
                                       value={editValues.dia}
                                       onChange={(e) => setEditValues({...editValues, dia: e.target.value})}
-                                      className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] font-black text-white uppercase outline-none"
+                                      disabled={isAutogestionada}
+                                      className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] font-black text-white uppercase outline-none disabled:opacity-30"
                                     >
                                       <option value="Pendiente">Pendiente</option>
+                                      <option value="Autogestionada">Autogestionada</option>
                                       {dias.map(d => <option key={d} value={d}>{d}</option>)}
                                     </select>
                                   </div>
@@ -239,7 +281,7 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                             {!isEditing && <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-8">SESIÓN UNIVERSITARIA</span>}
                           </div>
                         </div>
-                        
+
                         {/* DERECHA: MODALIDAD Y ACCIONES */}
                         <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end">
                           {isEditing ? (
@@ -252,6 +294,7 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                                 <option value="Virtual">Virtual</option>
                                 <option value="Presencial">Presencial</option>
                                 <option value="Semipresencial">Semipresencial</option>
+                                <option value="Autogestionada">Autogestionada</option>
                               </select>
                               {editValues.modalidad === 'Semipresencial' && (
                                 <div className="flex flex-col gap-1">
