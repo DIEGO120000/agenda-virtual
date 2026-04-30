@@ -13,6 +13,7 @@ interface Props {
 const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<EventoHorario>>({});
+  const [localHoras, setLocalHoras] = useState({ inicio: '', fin: '' });
   const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
   const getWeekNumber = (date: Date) => {
@@ -129,19 +130,26 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
 
     const startEditing = (evento: EventoHorario) => {
     setEditingId(evento.id);
+    const hIn = convertTo24Hour(evento.hora);
+    const hOut = convertTo24Hour(evento.horaFin);
+    setLocalHoras({ inicio: hIn, fin: hOut });
     setEditValues({ 
       actividad: evento.actividad, 
       modalidad: evento.modalidad,
       dia: evento.dia || "Pendiente",
-      hora: convertTo24Hour(evento.hora),
-      horaFin: convertTo24Hour(evento.horaFin),
+      hora: hIn,
+      horaFin: hOut,
       profesor: evento.profesor || "Pendiente",
       semiAnchorState: evento.semiAnchorState || "Presencial"
     });
     };
 
-    const saveEdit = (id: string) => {
-    const finalUpdates = { ...editValues };
+    const saveEdit = async (id: string) => {
+    const finalUpdates = { 
+      ...editValues,
+      hora: formatToAmPm(localHoras.inicio),
+      horaFin: formatToAmPm(localHoras.fin)
+    };
     if (finalUpdates.modalidad === 'Semipresencial') {
       finalUpdates.semiAnchorWeek = weekNow;
     }
@@ -150,8 +158,9 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
       finalUpdates.hora = "--";
       finalUpdates.horaFin = "--";
     }
-    if (onUpdate) onUpdate(id, finalUpdates);
+    if (onUpdate) await onUpdate(id, finalUpdates);
     setEditingId(null);
+    setLocalHoras({ inicio: '', fin: '' });
     };
 
     // LÓGICA DE AGRUPACIÓN ANTI-CRASH (100% VISIBILIDAD)
@@ -219,22 +228,22 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                         key={evento.id} 
                         className="bg-[#0f172a]/80 backdrop-blur-sm border border-white/5 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between group hover:border-blue-500/30 transition-all hover:shadow-2xl hover:shadow-blue-500/10 gap-6"
                       >
-                        <div className="flex items-center gap-8 flex-1 w-full">
+                        <div className="flex items-center gap-8 flex-1 w-full" onClick={(e) => isEditing && e.stopPropagation()}>
                           {/* IZQUIERDA: BLOQUE DE HORA */}
                           <div className="flex-none flex flex-col items-center justify-center bg-white/5 rounded-2xl px-4 py-3 min-w-[120px] border border-white/5">
                             {isEditing ? (
                               <div className="flex flex-col gap-2">
                                 <input 
                                   type="time" 
-                                  value={editValues.hora} 
-                                  onChange={(e) => setEditValues({...editValues, hora: e.target.value})}
+                                  value={localHoras.inicio} 
+                                  onChange={(e) => setLocalHoras({...localHoras, inicio: e.target.value})}
                                   disabled={isAutogestionada}
                                   className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none disabled:opacity-30"
                                 />
                                 <input 
                                   type="time" 
-                                  value={editValues.horaFin} 
-                                  onChange={(e) => setEditValues({...editValues, horaFin: e.target.value})}
+                                  value={localHoras.fin} 
+                                  onChange={(e) => setLocalHoras({...localHoras, fin: e.target.value})}
                                   disabled={isAutogestionada}
                                   className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none disabled:opacity-30"
                                 />
