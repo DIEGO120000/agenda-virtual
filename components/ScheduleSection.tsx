@@ -47,6 +47,24 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
     }
   };
 
+  const convertTo24Hour = (timeStr: string) => {
+    if (!timeStr || timeStr === '--') return '';
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+      let h = parseInt(match[1], 10);
+      const m = match[2].padStart(2, '0');
+      const period = match[3].toUpperCase();
+      if (period === 'PM' && h < 12) h += 12;
+      if (period === 'AM' && h === 12) h = 0;
+      return `${h.toString().padStart(2, '0')}:${m}`;
+    }
+    if (/^\d{1,2}:\d{2}$/.test(timeStr)) {
+      const parts = timeStr.split(':');
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    }
+    return timeStr;
+  };
+
   const timeToMinutes = (timeStr: string) => {
     if (!timeStr || timeStr === '--') return 9999;
     const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
@@ -115,8 +133,8 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
       actividad: evento.actividad, 
       modalidad: evento.modalidad,
       dia: evento.dia || "Pendiente",
-      hora: evento.hora,
-      horaFin: evento.horaFin,
+      hora: convertTo24Hour(evento.hora),
+      horaFin: convertTo24Hour(evento.horaFin),
       profesor: evento.profesor || "Pendiente",
       semiAnchorState: evento.semiAnchorState || "Presencial"
     });
