@@ -90,8 +90,27 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
     setEditingId(null);
   };
 
+  // LÓGICA DE AGRUPACIÓN ANTI-CRASH (100% VISIBILIDAD)
+  const groupedHorario = horario.reduce((acc, evento) => {
+    const diaNorm = normalize(evento.dia || "");
+    const diaReal = dias.find(d => normalize(d) === diaNorm) || "DÍA NO ESPECIFICADO";
+    if (!acc[diaReal]) acc[diaReal] = [];
+    acc[diaReal].push(evento);
+    return acc;
+  }, {} as Record<string, EventoHorario[]>);
+
+  // Ordenar días (días estándar primero, luego 'no especificado')
+  const sortedDayNames = Object.keys(groupedHorario).sort((a, b) => {
+    const idxA = dias.indexOf(a);
+    const idxB = dias.indexOf(b);
+    if (idxA === -1 && idxB === -1) return a.localeCompare(b);
+    if (idxA === -1) return 1;
+    if (idxB === -1) return -1;
+    return idxA - idxB;
+  });
+
   return (
-    <section id="schedule-section" className="bg-transparent overflow-hidden flex flex-col h-full min-h-[400px]">
+    <section id="schedule-section" className="bg-transparent overflow-hidden flex flex-col h-fit min-h-[200px] py-4">
       <div className="flex items-center justify-between mb-8 px-4">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-blue-600/20 rounded-2xl">
@@ -109,20 +128,15 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-16 pr-2 custom-scrollbar pb-10">
+      <div className="space-y-16 pb-10">
         {horario.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-center opacity-20">
             <Clock size={64} className="text-white mb-6" />
             <p className="text-white text-xs font-black uppercase tracking-[0.3em] max-w-[250px]">Sincronizando con Memoria Central...</p>
           </div>
         ) : (
-          dias.map(dia => {
-            const normDia = normalize(dia);
-            const eventosDelDia = horario
-              .filter(e => normalize(e.dia || "") === normDia)
-              .sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
-
-            if (eventosDelDia.length === 0) return null;
+          sortedDayNames.map(dia => {
+            const eventosDelDia = groupedHorario[dia].sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
 
             return (
               <div key={dia} className="animate-in fade-in slide-in-from-left duration-700 px-4">
@@ -135,18 +149,18 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                     return (
                       <div 
                         key={evento.id} 
-                        className="bg-[#0f172a] border border-white/5 rounded-[2rem] p-6 flex items-center justify-between group hover:border-blue-500/30 transition-all hover:shadow-2xl hover:shadow-blue-500/10"
+                        className="bg-[#0f172a]/80 backdrop-blur-sm border border-white/5 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between group hover:border-blue-500/30 transition-all hover:shadow-2xl hover:shadow-blue-500/10 gap-6"
                       >
-                        <div className="flex items-center gap-8 flex-1">
+                        <div className="flex items-center gap-8 flex-1 w-full">
                           {/* IZQUIERDA: BLOQUE DE HORA */}
-                          <div className="flex-none flex flex-col items-center justify-center bg-white/5 rounded-2xl px-4 py-3 min-w-[100px]">
+                          <div className="flex-none flex flex-col items-center justify-center bg-white/5 rounded-2xl px-4 py-3 min-w-[100px] border border-white/5">
                             <span className="text-white font-black text-sm">{formatToAmPm(evento.hora)}</span>
                             <div className="w-8 h-[1px] bg-white/10 my-2"></div>
                             <span className="text-white/40 font-bold text-xs">{formatToAmPm(evento.horaFin)}</span>
                           </div>
 
                           {/* CENTRO: MATERIA */}
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-1 flex-1">
                             <div className="flex items-center gap-3">
                               <GraduationCap size={20} className="text-blue-500" />
                               {isEditing ? (
@@ -154,10 +168,10 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                                   type="text" 
                                   value={editValues.actividad} 
                                   onChange={(e) => setEditValues({...editValues, actividad: e.target.value})}
-                                  className="bg-slate-800 border border-blue-500 rounded-lg px-3 py-1 text-sm outline-none text-white font-bold w-[300px]"
+                                  className="bg-slate-800 border border-blue-500 rounded-lg px-3 py-1 text-sm outline-none text-white font-bold w-full md:w-[300px]"
                                 />
                               ) : (
-                                <span className="text-xl font-black text-white tracking-tight">
+                                <span className="text-xl font-black text-white tracking-tight break-words">
                                   {sanitizeName(evento.actividad)}
                                 </span>
                               )}
@@ -167,7 +181,7 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                         </div>
                         
                         {/* DERECHA: MODALIDAD Y ACCIONES */}
-                        <div className="flex items-center gap-8">
+                        <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end">
                           {isEditing ? (
                             <select 
                               value={editValues.modalidad}
@@ -183,8 +197,6 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                           )}
                           
                           <div className="flex items-center gap-3">
-                            <GraduationCap size={18} className="text-white/10 group-hover:text-white/40 transition-colors" />
-                            <div className="w-[1px] h-8 bg-white/5 mx-2"></div>
                             {isEditing ? (
                               <>
                                 <button onClick={() => saveEdit(evento.id)} className="bg-emerald-500/20 text-emerald-500 p-2 rounded-xl hover:bg-emerald-500 hover:text-white transition-all"><Save size={18} /></button>
