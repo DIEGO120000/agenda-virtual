@@ -55,14 +55,15 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
       const anclaEstado = semiAnchorState || 'Presencial';
       const diff = Math.abs(weekNow - anclaSemana);
       const currentEstado = diff % 2 === 0 ? anclaEstado : (anclaEstado === 'Presencial' ? 'Virtual' : 'Presencial');
+
       const isVirtual = currentEstado === 'Virtual';
-      
+
       return (
         <div className="flex items-center gap-3">
           <div className="bg-orange-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-black/20">
             <MapPin size={12} /> SEMIPRESENCIAL
           </div>
-          <div className={`${isVirtual ? 'bg-green-500' : 'bg-orange-500'} text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-black/20 animate-pulse`}>
+          <div className={`${isVirtual ? 'bg-green-500' : 'bg-red-500'} text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-black/20 animate-pulse`}>
             {isVirtual ? <Monitor size={12} /> : <MapPin size={12} />}
             {isVirtual ? 'SEMANA VIRTUAL' : 'SEMANA PRESENCIAL'}
           </div>
@@ -87,6 +88,7 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
     setEditValues({ 
       actividad: evento.actividad, 
       modalidad: evento.modalidad,
+      dia: evento.dia || "Pendiente",
       hora: evento.hora,
       horaFin: evento.horaFin,
       profesor: evento.profesor || "Pendiente",
@@ -198,13 +200,23 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                               <GraduationCap size={20} className="text-blue-500" />
                               {isEditing ? (
                                 <div className="flex flex-col gap-2 w-full">
-                                  <input 
-                                    type="text" 
-                                    value={editValues.actividad} 
-                                    onChange={(e) => setEditValues({...editValues, actividad: e.target.value})}
-                                    className="bg-slate-800 border border-blue-500 rounded-lg px-3 py-1 text-sm outline-none text-white font-bold w-full md:w-[300px]"
-                                    placeholder="Nombre de la Materia"
-                                  />
+                                  <div className="flex items-center gap-2">
+                                    <input 
+                                      type="text" 
+                                      value={editValues.actividad} 
+                                      onChange={(e) => setEditValues({...editValues, actividad: e.target.value})}
+                                      className="bg-slate-800 border border-blue-500 rounded-lg px-3 py-1 text-sm outline-none text-white font-bold flex-1"
+                                      placeholder="Nombre de la Materia"
+                                    />
+                                    <select 
+                                      value={editValues.dia}
+                                      onChange={(e) => setEditValues({...editValues, dia: e.target.value})}
+                                      className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[10px] font-black text-white uppercase outline-none"
+                                    >
+                                      <option value="Pendiente">Pendiente</option>
+                                      {dias.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                  </div>
                                   <input 
                                     type="text" 
                                     value={editValues.profesor} 
