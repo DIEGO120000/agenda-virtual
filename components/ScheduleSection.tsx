@@ -61,37 +61,35 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
       const diff = Math.abs(weekNow - ancla);
       const currentEstado = diff % 2 === 0 ? baseEstado : (baseEstado === 'Presencial' ? 'Virtual' : 'Presencial');
       
-      const isVirtual = currentEstado === 'Virtual';
-      const color = isVirtual 
-        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800'
-        : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800';
-
       return (
         <button 
           onClick={() => onUpdate && onUpdate(id, { 
             semanaAncla: weekNow, 
             estadoAncla: currentEstado === 'Presencial' ? 'Virtual' : 'Presencial' 
           })}
-          className={`flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-md border uppercase tracking-wider shadow-sm ml-auto transition-all active:scale-95 ${color}`}
+          className="flex items-center gap-2 text-xs font-bold uppercase transition-all active:scale-95"
         >
-          {isVirtual ? <Monitor size={10} /> : <MapPin size={10} />}
-          Semi - {currentEstado}
+          <span className="text-orange-500 text-lg">🟠</span>
+          <span className="text-gray-400">Semi -</span>
+          <span className={currentEstado === 'Virtual' ? 'text-green-500' : 'text-red-500'}>{currentEstado}</span>
         </button>
       );
     }
 
-    let icon = <Monitor size={10} />;
-    let color = 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800'; 
-    
-    if (modalidad === 'Presencial') {
-      icon = <MapPin size={10} />;
-      color = 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800'; 
+    if (modalidad === 'Virtual') {
+      return (
+        <div className="flex items-center gap-2 text-xs font-bold uppercase">
+          <span className="text-green-500 text-lg">🟢</span>
+          <span className="text-green-500">Virtual</span>
+        </div>
+      );
     }
 
     return (
-      <span className={`flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-md border uppercase tracking-wider shadow-sm ml-auto ${color}`}>
-        {icon} {modalidad}
-      </span>
+      <div className="flex items-center gap-2 text-xs font-bold uppercase">
+        <span className="text-red-500 text-lg">🔴</span>
+        <span className="text-red-500">Presencial</span>
+      </div>
     );
   };
 
@@ -106,25 +104,26 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
   };
 
   return (
-    <section id="schedule-section" className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden transition-colors duration-300 flex flex-col h-full min-h-[400px]">
-      <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-indigo-900/20 flex items-center justify-between">
-        <h2 className="font-bold text-indigo-800 dark:text-indigo-400 flex items-center gap-2 uppercase text-xs tracking-widest">
-          <CalendarDays size={18} /> Schedule / Horario Validado
+    <section id="schedule-section" className="bg-[#0B1121] rounded-3xl p-8 shadow-2xl border border-slate-800 overflow-hidden transition-colors duration-300 flex flex-col h-full min-h-[400px]">
+      <div className="flex items-center justify-between mb-10">
+        <h2 className="text-white font-black uppercase text-xs tracking-[0.3em] flex items-center gap-3 opacity-50">
+          <CalendarDays size={20} className="text-blue-500" /> Horario Académico Definitive
         </h2>
         {horario.length > 0 && (
           <button 
             onClick={onClear}
-            className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-2 py-1 rounded hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors uppercase font-bold border border-red-100 dark:border-red-900/30"
+            className="text-[10px] bg-red-500/10 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/20 transition-all uppercase font-black tracking-widest border border-red-500/20"
           >
-            Limpiar Todo
+            Reset Data
           </button>
         )}
       </div>
-      <div className="p-4 flex-1 overflow-y-auto space-y-4 max-h-[600px]">
+
+      <div className="flex-1 overflow-y-auto space-y-12 pr-4 custom-scrollbar">
         {horario.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Clock size={48} className="text-gray-200 dark:text-slate-800 mb-2" />
-            <p className="text-gray-400 dark:text-slate-500 text-sm italic max-w-[250px]">Pega tu horario académico en el chat para que el sistema lo procese automáticamente.</p>
+          <div className="flex flex-col items-center justify-center py-24 text-center opacity-20">
+            <Clock size={64} className="text-white mb-4" />
+            <p className="text-white text-sm font-bold uppercase tracking-widest max-w-[250px]">Waiting for schedule input...</p>
           </div>
         ) : (
           <>
@@ -137,52 +136,46 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
               if (eventosDelDia.length === 0) return null;
 
               return (
-                <div key={dia} className="space-y-2">
-                  <h3 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase border-b border-gray-100 dark:border-slate-800 pb-1 tracking-widest">{dia}</h3>
-                  <div className="grid gap-2">
+                <div key={dia} className="animate-in fade-in slide-in-from-left duration-700">
+                  <h3 className="text-white font-bold text-3xl uppercase text-left mb-6 mt-8 block tracking-tighter italic">
+                    {dia}
+                  </h3>
+                  <div className="space-y-4">
                     {eventosDelDia.map(evento => {
                       const isEditing = editingId === evento.id;
                       return (
                         <div 
                           key={evento.id} 
-                          className={`flex items-center justify-between p-3 rounded-xl border group transition-all duration-200 hover:shadow-md ${
-                            evento.tipo === 'clase' ? 'bg-blue-50/40 dark:bg-blue-900/5 border-blue-100 dark:border-blue-900/20' : 
-                            evento.tipo === 'estudio' ? 'bg-purple-50/40 dark:bg-purple-900/5 border-purple-100 dark:border-purple-900/20' :
-                            'bg-orange-50/40 dark:bg-orange-900/5 border-orange-100 dark:border-orange-900/20'
-                          }`}
+                          className="flex justify-between items-center py-5 border-b border-white/5 group hover:bg-white/[0.02] px-4 rounded-2xl transition-all"
                         >
-                          <div className="flex items-center gap-4 flex-1">
-                            <div className="flex flex-col items-center justify-center min-w-[85px] font-mono text-[9px] font-bold text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-lg border border-gray-100 dark:border-slate-700 shadow-sm">
-                              <span className="text-gray-800 dark:text-white whitespace-nowrap">{formatToAmPm(evento.hora)}</span>
-                              <div className="w-full h-[1px] bg-gray-100 dark:bg-slate-700 my-0.5"></div>
-                              <span className="text-gray-400 dark:text-slate-500 whitespace-nowrap">{formatToAmPm(evento.horaFin)}</span>
-                            </div>
-                            <div className="flex flex-col flex-1">
-                              <div className="flex items-center gap-2">
-                                {getIcon(evento.tipo)}
+                          <div className="flex items-center gap-6 flex-1">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-3">
                                 {isEditing ? (
                                   <input 
                                     type="text" 
                                     value={editValues.actividad} 
                                     onChange={(e) => setEditValues({...editValues, actividad: e.target.value})}
-                                    className="bg-white dark:bg-slate-800 border border-blue-500 rounded px-2 py-0.5 text-xs outline-none w-full"
+                                    className="bg-slate-800 border border-blue-500 rounded-lg px-3 py-1 text-sm outline-none text-white font-bold"
                                   />
                                 ) : (
-                                  <span className="text-sm font-bold text-gray-800 dark:text-slate-100">{evento.actividad}</span>
+                                  <span className="text-xl font-bold text-white tracking-tight">
+                                    {evento.actividad.replace(/\*/g, '')}
+                                  </span>
                                 )}
+                                <span className="text-sm font-black text-white uppercase tracking-widest ml-2">
+                                  {formatToAmPm(evento.hora)} - {formatToAmPm(evento.horaFin)}
+                                </span>
                               </div>
-                              <span className="text-[9px] text-gray-400 dark:text-slate-500 uppercase font-semibold tracking-tighter mt-0.5">
-                                {evento.tipo === 'clase' ? 'Sesión Universitaria' : evento.tipo === 'estudio' ? 'Foco de Estudio' : 'Recuperación'}
-                              </span>
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-8">
                             {isEditing && evento.tipo === 'clase' ? (
                               <select 
                                 value={editValues.modalidad}
                                 onChange={(e) => setEditValues({...editValues, modalidad: e.target.value as any})}
-                                className="bg-white dark:bg-slate-800 border border-blue-500 rounded text-[9px] p-1 font-bold"
+                                className="bg-slate-800 border border-blue-500 rounded-lg text-[10px] p-2 font-black text-white uppercase outline-none"
                               >
                                 <option value="Virtual">Virtual</option>
                                 <option value="Presencial">Presencial</option>
@@ -192,19 +185,18 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                               evento.tipo === 'clase' && getModalityBadge(evento)
                             )}
                             
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               {isEditing ? (
                                 <>
-                                  <button onClick={() => saveEdit(evento.id)} className="text-blue-500 hover:text-blue-600"><Save size={16} /></button>
-                                  <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-red-500"><X size={16} /></button>
+                                  <button onClick={() => saveEdit(evento.id)} className="text-green-500 hover:scale-110 transition-transform"><Save size={18} /></button>
+                                  <button onClick={() => setEditingId(null)} className="text-gray-500 hover:scale-110 transition-transform"><X size={18} /></button>
                                 </>
                               ) : (
                                 <>
-                                  <button onClick={() => startEditing(evento)} className="text-gray-300 dark:text-slate-700 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all p-1"><Edit2 size={16} /></button>
+                                  <button onClick={() => startEditing(evento)} className="text-white/10 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100 p-2"><Edit2 size={16} /></button>
                                   <button 
                                     onClick={() => onRemove(evento.id)}
-                                    className="text-gray-300 dark:text-slate-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
-                                    title="Remover evento"
+                                    className="text-white/10 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-2"
                                   >
                                     <Trash2 size={16} />
                                   </button>
@@ -220,26 +212,25 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
               );
             })}
 
-            {/* Auditoría de Datos: Mostrar eventos sin día válido */}
+            {/* Auditoría de Datos */}
             {(() => {
               const standardDays = dias.map(d => normalize(d));
               const extraEvents = horario.filter(e => !standardDays.includes(normalize(e.dia || "")));
-              
               if (extraEvents.length === 0) return null;
 
               return (
-                <div className="mt-8 pt-4 border-t border-dashed border-gray-200 dark:border-slate-800">
-                  <h3 className="text-[10px] font-black text-red-400 dark:text-red-500/50 uppercase pb-1 tracking-widest flex items-center gap-2">
-                    ⚠️ Otros / Sin Clasificar (Audit Data)
+                <div className="mt-16 pt-8 border-t border-dashed border-white/10 opacity-30">
+                  <h3 className="text-[10px] font-black text-white uppercase pb-4 tracking-[0.3em]">
+                    Unclassified Data
                   </h3>
-                  <div className="grid gap-2 opacity-80">
+                  <div className="grid gap-2">
                     {extraEvents.map(evento => (
-                      <div key={evento.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50">
-                        <div className="flex items-center gap-4">
-                          <span className="text-[9px] font-mono font-bold bg-white dark:bg-slate-800 px-2 py-1 rounded border border-gray-100 dark:border-slate-700">{evento.dia || 'S/D'}</span>
-                          <span className="text-xs font-bold text-gray-500">{evento.actividad}</span>
+                      <div key={evento.id} className="flex items-center justify-between py-2 px-4 rounded-xl hover:bg-white/5 transition-all">
+                        <div className="flex items-center gap-4 text-white">
+                          <span className="text-[10px] font-black opacity-50">{evento.dia || 'S/D'}</span>
+                          <span className="text-xs font-bold">{evento.actividad}</span>
                         </div>
-                        <button onClick={() => onRemove(evento.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
+                        <button onClick={() => onRemove(evento.id)} className="text-white/20 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                       </div>
                     ))}
                   </div>
