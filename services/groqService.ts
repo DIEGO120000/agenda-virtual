@@ -16,11 +16,12 @@ export const analizarComando = async (texto: string) => {
   Analiza: "${texto}".
   
   REGLAS ABSOLUTAS DE CLASIFICACIÓN Y EDICIÓN:
-  1. MODIFICACIÓN: Si el usuario pide cambiar, corregir o actualizar algo existente (ej. "cambia la hora de la clase de Matemáticas" o "actualiza la fecha de la tarea X"), DEBES usar el tipo "modificacion". Identifica el objetivo (tareas/notas/horario) y el nombre del registro.
-  2. MATERIAS: Si el usuario dicta una hora de inicio, una hora de fin, un día de la semana y un nombre de asignatura, ES OBLIGATORIAMENTE UNA MATERIA (tipo: "horario").
-  3. TAREAS vs NOTAS: Para que sea una TAREA nueva, el usuario DEBE dictar explícitamente una fecha u hora de culminación exacta.
-  4. REGLA DE ORO: Si identificas una acción pero EL USUARIO NO DICTÓ FECHA DE CULMINACIÓN, ESTÁ ESTRICTAMENTE PROHIBIDO INVENTARLA. Clasifícalo como NOTA.
-  5. Si es información general o el tiempo es ambiguo, CLASIFÍCALO COMO NOTA.
+  1. PRIORIDAD DE MATERIAS: Cuando el usuario te dicte sus materias, días, horas y profesores (ej. "estas son mis materias..."), tu ÚNICA acción estructural debe ser agregarlas o actualizarlas en la sección de HORARIO/MATERIAS (tipo: "horario"). NUNCA las agregues directamente a calificaciones.
+  2. MODIFICACIÓN: Si el usuario pide cambiar, corregir o actualizar algo existente (ej. "cambia la hora de la clase de Matemáticas" o "actualiza la fecha de la tarea X"), DEBES usar el tipo "modificacion". Identifica el objetivo (tareas/notas/horario) y el nombre del registro.
+  3. MATERIAS: Si el usuario dicta una hora de inicio, una hora de fin, un día de la semana y un nombre de asignatura, ES OBLIGATORIAMENTE UNA MATERIA (tipo: "horario").
+  4. TAREAS vs NOTAS: Para que sea una TAREA nueva, el usuario DEBE dictar explícitamente una fecha u hora de culminación exacta.
+  5. REGLA DE ORO: Si identificas una acción pero EL USUARIO NO DICTÓ FECHA DE CULMINACIÓN, ESTÁ ESTRICTAMENTE PROHIBIDO INVENTARLA. Clasifícalo como NOTA (tipo: "nota").
+  6. Si es información general o el tiempo es ambiguo, CLASIFÍCALO COMO NOTA.
 
   Formato de salida JSON (ESTRICTO):
   {

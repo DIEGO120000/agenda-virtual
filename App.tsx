@@ -70,6 +70,34 @@ const App: React.FC = () => {
   }, [theme]);
 
   // Handlers sincronizados con DB
+  const handleUpdateHorario = async (id: string, updates: Partial<EventoHorario>) => {
+    const oldEvento = state.horario.find(e => e.id === id);
+    if (oldEvento && updates.actividad && updates.actividad !== oldEvento.actividad) {
+      // Propagar cambio de nombre a todas las entradas del horario con el mismo nombre
+      const sameSubjects = state.horario.filter(e => e.actividad === oldEvento.actividad);
+      for (const s of sameSubjects) {
+        await updateMyData('horario', s.id, { actividad: updates.actividad });
+      }
+      // Propagar a calificaciones
+      const relatedCalifs = state.calificaciones.filter(c => c.materia === oldEvento.actividad);
+      for (const calif of relatedCalifs) {
+        await updateMyData('calificaciones', calif.id, { materia: updates.actividad });
+      }
+    } else {
+      await updateMyData('horario', id, updates);
+    }
+  };
+
+  const handleRemoveHorario = async (id: string) => {
+    const evento = state.horario.find(e => e.id === id);
+    if (evento) {
+      await deleteMyData('horario', id);
+      // Opcional: Si ya no quedan entradas para esa materia, podríamos limpiar calificaciones
+      // pero por seguridad de datos del usuario, las mantendremos ocultas en la UI 
+      // hasta que la materia vuelva a aparecer o se borren manualmente.
+    }
+  };
+
   const handleAddTask = async (t: any) => {
     const nuevaTarea = {
       ...t,
@@ -228,9 +256,9 @@ const App: React.FC = () => {
           <div className="lg:col-span-2 space-y-8">
             <ScheduleSection 
               horario={state.horario} 
-              onRemove={(id) => deleteMyData('horario', id)}
+              onRemove={handleRemoveHorario}
               onClear={() => state.horario.forEach(e => deleteMyData('horario', e.id))}
-              onUpdate={(id, updates) => updateMyData('horario', id, updates)}
+              onUpdate={handleUpdateHorario}
             />
             <GradesSection 
               horario={state.horario}
