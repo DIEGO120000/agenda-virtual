@@ -130,8 +130,16 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
 
     const startEditing = (evento: EventoHorario) => {
     setEditingId(evento.id);
-    const hIn = convertTo24Hour(evento.hora);
-    const hOut = convertTo24Hour(evento.horaFin);
+    
+    // SANITIZACIÓN: Solo permitir HH:mm válido para el input type="time"
+    const isValidTime = (t: string) => /^\d{2}:\d{2}$/.test(t);
+    
+    const hInRaw = convertTo24Hour(evento.hora);
+    const hOutRaw = convertTo24Hour(evento.horaFin);
+    
+    const hIn = isValidTime(hInRaw) ? hInRaw : "";
+    const hOut = isValidTime(hOutRaw) ? hOutRaw : "";
+    
     setLocalHoras({ inicio: hIn, fin: hOut });
     setEditValues({ 
       actividad: evento.actividad, 
@@ -145,10 +153,14 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
     };
 
     const saveEdit = async (id: string) => {
+    // Si el valor está vacío, guardarlo como "Pendiente"
+    const finalHora = localHoras.inicio ? formatToAmPm(localHoras.inicio) : "Pendiente";
+    const finalHoraFin = localHoras.fin ? formatToAmPm(localHoras.fin) : "Pendiente";
+
     const finalUpdates = { 
       ...editValues,
-      hora: formatToAmPm(localHoras.inicio),
-      horaFin: formatToAmPm(localHoras.fin)
+      hora: finalHora,
+      horaFin: finalHoraFin
     };
     if (finalUpdates.modalidad === 'Semipresencial') {
       finalUpdates.semiAnchorWeek = weekNow;
@@ -235,15 +247,15 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                               <div className="flex flex-col gap-2">
                                 <input 
                                   type="time" 
-                                  value={localHoras.inicio} 
-                                  onChange={(e) => setLocalHoras({...localHoras, inicio: e.target.value})}
+                                  value={localHoras.inicio || ""} 
+                                  onChange={(e) => setLocalHoras(prev => ({ ...prev, inicio: e.target.value }))}
                                   disabled={isAutogestionada}
                                   className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none disabled:opacity-30"
                                 />
                                 <input 
                                   type="time" 
-                                  value={localHoras.fin} 
-                                  onChange={(e) => setLocalHoras({...localHoras, fin: e.target.value})}
+                                  value={localHoras.fin || ""} 
+                                  onChange={(e) => setLocalHoras(prev => ({ ...prev, fin: e.target.value }))}
                                   disabled={isAutogestionada}
                                   className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none disabled:opacity-30"
                                 />
