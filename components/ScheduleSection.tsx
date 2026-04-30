@@ -16,9 +16,11 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
   const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
   const getWeekNumber = (date: Date) => {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
   };
 
   const weekNow = getWeekNumber(new Date());
@@ -31,62 +33,73 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
   const formatToAmPm = (time24: string) => {
     if (!time24 || typeof time24 !== 'string' || !time24.includes(':')) return time24 || '';
     try {
+      if (time24.toUpperCase().includes('AM') || time24.toUpperCase().includes('PM')) return time24;
       const parts = time24.split(':');
-      const hours = parseInt(parts[0], 10);
+      let hours = parseInt(parts[0], 10);
       const minutes = parseInt(parts[1], 10);
       const period = hours >= 12 ? 'PM' : 'AM';
-      const hours12 = hours % 12 || 12;
+      hours = hours % 12 || 12;
       const minutesStr = minutes < 10 ? `0${minutes}` : minutes.toString();
-      return `${hours12}:${minutesStr} ${period}`;
+      return `${hours}:${minutesStr} ${period}`;
     } catch (e) {
       return time24;
     }
   };
 
   const getModalityBadge = (evento: EventoHorario) => {
-    const { modalidad, id, semanaAncla, estadoAncla } = evento;
+    const { modalidad, semiAnchorWeek, semiAnchorState } = evento;
     if (!modalidad) return null;
 
-    let currentEstado = modalidad;
     if (modalidad === 'Semipresencial') {
-      const ancla = semanaAncla || weekNow;
-      const baseEstado = estadoAncla || 'Presencial';
-      const diff = Math.abs(weekNow - ancla);
-      currentEstado = diff % 2 === 0 ? baseEstado : (baseEstado === 'Presencial' ? 'Virtual' : 'Presencial');
+      const anclaSemana = semiAnchorWeek || weekNow;
+      const anclaEstado = semiAnchorState || 'Presencial';
+      const diff = Math.abs(weekNow - anclaSemana);
+      const currentEstado = diff % 2 === 0 ? anclaEstado : (anclaEstado === 'Presencial' ? 'Virtual' : 'Presencial');
+      const isVirtual = currentEstado === 'Virtual';
+      
+      return (
+        <div className="flex items-center gap-3">
+          <div className="bg-orange-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-black/20">
+            <MapPin size={12} /> SEMIPRESENCIAL
+          </div>
+          <div className={`${isVirtual ? 'bg-green-500' : 'bg-orange-500'} text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-black/20 animate-pulse`}>
+            {isVirtual ? <Monitor size={12} /> : <MapPin size={12} />}
+            {isVirtual ? 'SEMANA VIRTUAL' : 'SEMANA PRESENCIAL'}
+          </div>
+        </div>
+      );
     }
 
-    const isVirtual = currentEstado === 'Virtual';
+    const isVirtual = modalidad === 'Virtual';
     const bgColor = isVirtual ? 'bg-green-500' : 'bg-orange-500';
     const label = isVirtual ? 'VIRTUAL' : 'SESIÓN PRESENCIAL';
 
     return (
-      <div className="flex items-center gap-4">
-        <div className={`${bgColor} text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-black/20`}>
-          {isVirtual ? <Monitor size={12} /> : <MapPin size={12} />}
-          {label}
-        </div>
-        {modalidad === 'Semipresencial' && onUpdate && (
-          <button 
-            onClick={() => onUpdate(id, { 
-              semanaAncla: weekNow, 
-              estadoAncla: currentEstado === 'Presencial' ? 'Virtual' : 'Presencial' 
-            })}
-            className="text-white/20 hover:text-white transition-colors text-[9px] font-bold uppercase tracking-widest"
-          >
-            Alternar
-          </button>
-        )}
+      <div className={`${bgColor} text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-black/20`}>
+        {isVirtual ? <Monitor size={12} /> : <MapPin size={12} />}
+        {label}
       </div>
     );
   };
 
   const startEditing = (evento: EventoHorario) => {
     setEditingId(evento.id);
-    setEditValues({ actividad: evento.actividad, modalidad: evento.modalidad });
+    setEditValues({ 
+      actividad: evento.actividad, 
+      modalidad: evento.modalidad,
+      hora: evento.hora,
+      horaFin: evento.horaFin,
+      profesor: evento.profesor || "Pendiente",
+      semiAnchorState: evento.semiAnchorState || "Presencial"
+    });
   };
 
   const saveEdit = (id: string) => {
-    if (onUpdate) onUpdate(id, editValues);
+    const finalUpdates = { ...editValues };
+    if (finalUpdates.modalidad === 'Semipresencial') {
+      finalUpdates.semiAnchorWeek = weekNow;
+    }
+    if (onUpdate) onUpdate(id, finalUpdates);
     setEditingId(null);
   };
 
@@ -94,16 +107,13 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
   const groupedHorario = horario.reduce((acc, evento) => {
     const rawDia = evento.dia || "";
     const diaNorm = normalize(rawDia);
-    // Encontrar el nombre canónico (ej. 'Lunes') o usar el original si no coincide
     const diaCanonico = dias.find(d => normalize(d) === diaNorm) || (rawDia.trim() || "DÍA NO ESPECIFICADO");
-    
     const diaKey = diaCanonico.toUpperCase();
     if (!acc[diaKey]) acc[diaKey] = [];
     acc[diaKey].push(evento);
     return acc;
   }, {} as Record<string, EventoHorario[]>);
 
-  // Ordenar las llaves (Días de la semana primero, luego otros)
   const sortedDayNames = Object.keys(groupedHorario).sort((a, b) => {
     const idxA = dias.findIndex(d => d.toUpperCase() === a);
     const idxB = dias.findIndex(d => d.toUpperCase() === b);
@@ -157,10 +167,29 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                       >
                         <div className="flex items-center gap-8 flex-1 w-full">
                           {/* IZQUIERDA: BLOQUE DE HORA */}
-                          <div className="flex-none flex flex-col items-center justify-center bg-white/5 rounded-2xl px-4 py-3 min-w-[100px] border border-white/5">
-                            <span className="text-white font-black text-sm">{formatToAmPm(evento.hora)}</span>
-                            <div className="w-8 h-[1px] bg-white/10 my-2"></div>
-                            <span className="text-white/40 font-bold text-xs">{formatToAmPm(evento.horaFin)}</span>
+                          <div className="flex-none flex flex-col items-center justify-center bg-white/5 rounded-2xl px-4 py-3 min-w-[120px] border border-white/5">
+                            {isEditing ? (
+                              <div className="flex flex-col gap-2">
+                                <input 
+                                  type="time" 
+                                  value={editValues.hora} 
+                                  onChange={(e) => setEditValues({...editValues, hora: e.target.value})}
+                                  className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none"
+                                />
+                                <input 
+                                  type="time" 
+                                  value={editValues.horaFin} 
+                                  onChange={(e) => setEditValues({...editValues, horaFin: e.target.value})}
+                                  className="bg-slate-800 text-white text-[10px] p-1 rounded border border-blue-500 outline-none"
+                                />
+                              </div>
+                            ) : (
+                              <>
+                                <span className="text-white font-black text-sm">{formatToAmPm(evento.hora)}</span>
+                                <div className="w-8 h-[1px] bg-white/10 my-2"></div>
+                                <span className="text-white/40 font-bold text-xs">{formatToAmPm(evento.horaFin)}</span>
+                              </>
+                            )}
                           </div>
 
                           {/* CENTRO: MATERIA */}
@@ -168,34 +197,64 @@ const ScheduleSection: React.FC<Props> = ({ horario, onRemove, onClear, onUpdate
                             <div className="flex items-center gap-3">
                               <GraduationCap size={20} className="text-blue-500" />
                               {isEditing ? (
-                                <input 
-                                  type="text" 
-                                  value={editValues.actividad} 
-                                  onChange={(e) => setEditValues({...editValues, actividad: e.target.value})}
-                                  className="bg-slate-800 border border-blue-500 rounded-lg px-3 py-1 text-sm outline-none text-white font-bold w-full md:w-[300px]"
-                                />
+                                <div className="flex flex-col gap-2 w-full">
+                                  <input 
+                                    type="text" 
+                                    value={editValues.actividad} 
+                                    onChange={(e) => setEditValues({...editValues, actividad: e.target.value})}
+                                    className="bg-slate-800 border border-blue-500 rounded-lg px-3 py-1 text-sm outline-none text-white font-bold w-full md:w-[300px]"
+                                    placeholder="Nombre de la Materia"
+                                  />
+                                  <input 
+                                    type="text" 
+                                    value={editValues.profesor} 
+                                    onChange={(e) => setEditValues({...editValues, profesor: e.target.value})}
+                                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-[10px] outline-none text-white/60 font-bold w-full md:w-[300px]"
+                                    placeholder="Nombre del Profesor"
+                                  />
+                                </div>
                               ) : (
-                                <span className="text-xl font-black text-white tracking-tight break-words">
-                                  {sanitizeName(evento.actividad)}
-                                </span>
+                                <div className="flex flex-col">
+                                  <span className="text-xl font-black text-white tracking-tight break-words">
+                                    {sanitizeName(evento.actividad)}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-0.5">
+                                    Prof. {evento.profesor || "Pendiente"}
+                                  </span>
+                                </div>
                               )}
                             </div>
-                            <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-8">SESIÓN UNIVERSITARIA</span>
+                            {!isEditing && <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-8">SESIÓN UNIVERSITARIA</span>}
                           </div>
                         </div>
                         
                         {/* DERECHA: MODALIDAD Y ACCIONES */}
                         <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end">
                           {isEditing ? (
-                            <select 
-                              value={editValues.modalidad}
-                              onChange={(e) => setEditValues({...editValues, modalidad: e.target.value as any})}
-                              className="bg-slate-800 border border-blue-500 rounded-lg text-[10px] p-2 font-black text-white uppercase outline-none"
-                            >
-                              <option value="Virtual">Virtual</option>
-                              <option value="Presencial">Presencial</option>
-                              <option value="Semipresencial">Semipresencial</option>
-                            </select>
+                            <div className="flex flex-col gap-2">
+                              <select 
+                                value={editValues.modalidad}
+                                onChange={(e) => setEditValues({...editValues, modalidad: e.target.value as any})}
+                                className="bg-slate-800 border border-blue-500 rounded-lg text-[10px] p-2 font-black text-white uppercase outline-none"
+                              >
+                                <option value="Virtual">Virtual</option>
+                                <option value="Presencial">Presencial</option>
+                                <option value="Semipresencial">Semipresencial</option>
+                              </select>
+                              {editValues.modalidad === 'Semipresencial' && (
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] text-white/40 font-black uppercase">Inicia esta semana con:</label>
+                                  <select 
+                                    value={editValues.semiAnchorState}
+                                    onChange={(e) => setEditValues({...editValues, semiAnchorState: e.target.value as any})}
+                                    className="bg-slate-800 border border-slate-700 rounded p-1 text-[8px] font-bold text-white uppercase"
+                                  >
+                                    <option value="Presencial">Presencial</option>
+                                    <option value="Virtual">Virtual</option>
+                                  </select>
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             getModalityBadge(evento)
                           )}

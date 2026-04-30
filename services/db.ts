@@ -37,6 +37,9 @@ const sanitizeData = (collectionName: string, data: any) => {
       actividad: sanitized.actividad || sanitized.nombre || "Sin Nombre",
       modalidad: sanitized.modalidad || "Pendiente",
       tipo: sanitized.tipo || "clase",
+      profesor: sanitized.profesor || "Pendiente",
+      semiAnchorWeek: sanitized.semiAnchorWeek || null,
+      semiAnchorState: sanitized.semiAnchorState || null,
       ...sanitized
     };
   }

@@ -19,9 +19,9 @@ export const analizarComando = async (texto: string) => {
   1. PRIORIDAD DE MATERIAS: Cuando el usuario te dicte sus materias, días, horas y profesores (ej. "estas son mis materias..."), tu ÚNICA acción estructural debe ser agregarlas o actualizarlas en la sección de HORARIO/MATERIAS (tipo: "horario"). NUNCA las agregues directamente a calificaciones.
   
   2. ESQUEMA ESTRICTO PARA MATERIAS (HORARIO): Cuando detectes una materia, DEBES devolver un objeto JSON con EXACTAMENTE estas claves:
-     - "dia": El día de la semana explícito (Ej. "Lunes", "Martes", "Sábado"). Si dice "Autogestionada" o "Pendiente", pon "Pendiente". ESTÁ ESTRICTAMENTE PROHIBIDO omitir el campo "dia".
+     - "dia": El día de la semana explícito en TEXTO PLANO (Ej. "Lunes", "Martes", "Sábado"). ESTÁ ESTRICTAMENTE PROHIBIDO devolver fechas ISO o marcas de tiempo. Si dice "Autogestionada" o "Pendiente", pon "Pendiente".
      - "hora_inicio": La hora exacta de inicio (Ej. "8:00 AM").
-     - "hora_fin": La hora exacta de fin (Ej. "11:00 AM").
+     - "hora_fin": La hora exacta de fin (Ej. "11:00 AM"). REGLA DE CIERRE: El horario institucional termina a las 10:00 PM. Ninguna materia puede terminar después de esa hora; si el usuario sugiere una hora posterior, cámbiala a "10:00 PM".
      - "nombre": El nombre de la materia sin asteriscos.
      - "profesor": El nombre del profesor.
      - "modalidad": "Virtual", "Presencial" o "Semipresencial".
@@ -45,7 +45,7 @@ export const analizarComando = async (texto: string) => {
     "respuesta": "Resumen natural consolidado de las acciones realizadas."
   }
 
-  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo (fuera de horario), DEBES calcular la fecha real utilizando el contexto de la fecha actual proporcionada y devolverla ESTRICTAMENTE en formato ISO 8601.
+  REGLA VITAL DE FECHAS: Para cualquier campo de tiempo (FUERA de la sección de materias/horario), DEBES calcular la fecha real utilizando el contexto de la fecha actual proporcionada y devolverla ESTRICTAMENTE en formato ISO 8601.
 
   CERO TEXTO EXTRA. SOLO JSON.`;
 

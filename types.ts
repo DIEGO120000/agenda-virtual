@@ -41,10 +41,11 @@ export interface EventoHorario {
   hora: string; // '08:00'
   horaFin: string; // '10:00'
   actividad: string;
+  profesor?: string;
   tipo: 'clase' | 'estudio' | 'descanso';
   modalidad?: 'Virtual' | 'Semipresencial' | 'Presencial';
-  semanaAncla?: number;
-  estadoAncla?: 'Virtual' | 'Presencial';
+  semiAnchorWeek?: number;
+  semiAnchorState?: 'Virtual' | 'Presencial';
 }
 
 export interface EntradaCalificacion {
