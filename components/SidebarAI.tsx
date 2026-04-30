@@ -101,36 +101,40 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
       
       // Procesamiento Secuencial de Acciones (Multi-Intento)
       for (const accion of acciones) {
-        switch (accion.tipo) {
+        // Blindaje contra undefined (Regla estricta de Firebase)
+        const sanitizedAccion = { ...accion };
+        
+        switch (sanitizedAccion.tipo) {
           case 'modificacion': {
-            const collectionName = accion.objetivo === 'horario' ? 'horario' : 
-                                  accion.objetivo === 'tareas' ? 'tareas' : 'notas';
+            const collectionName = sanitizedAccion.objetivo === 'horario' ? 'horario' : 
+                                  sanitizedAccion.objetivo === 'tareas' ? 'tareas' : 'notas';
             
-            const collectionData = state[accion.objetivo as keyof AppState] as any[];
+            const collectionData = state[sanitizedAccion.objetivo as keyof AppState] as any[];
             const target = collectionData.find((item: any) => 
-              item.id === accion.identificador || 
-              (item.nombre || item.actividad || item.materia || item.contenido)?.toLowerCase().includes(String(accion.identificador).toLowerCase())
+              item.id === sanitizedAccion.identificador || 
+              (item.nombre || item.actividad || item.materia || item.contenido)?.toLowerCase().includes(String(sanitizedAccion.identificador).toLowerCase())
             );
 
             if (target) {
-              await updateMyData(collectionName, target.id, accion.nuevos_datos);
+              await updateMyData(collectionName, target.id, sanitizedAccion.nuevos_datos);
             }
             break;
           }
 
           case 'horario':
             await saveData('horario', {
-              actividad: accion.materia?.toUpperCase() || "MATERIA",
-              dia: accion.dia,
-              hora: accion.hora,
-              modalidad: accion.modalidad || "Presencial",
+              actividad: (sanitizedAccion.materia || sanitizedAccion.nombre || sanitizedAccion.actividad || "Sin Nombre").toUpperCase(),
+              dia: sanitizedAccion.dia || "Pendiente",
+              hora: sanitizedAccion.hora || sanitizedAccion.hora_inicio || "Pendiente",
+              horaFin: sanitizedAccion.horaFin || sanitizedAccion.hora_fin || "Pendiente",
+              modalidad: sanitizedAccion.modalidad || "Pendiente",
               tipo: 'clase'
             });
             break;
 
           case 'tarea': {
             const fechaIngreso = new Date();
-            const parsedCulm = new Date(accion.culminacion);
+            const parsedCulm = new Date(sanitizedAccion.culminacion);
             const fechaCulminacion = isNaN(parsedCulm.getTime()) 
               ? new Date(new Date().setHours(23, 59, 59)) 
               : parsedCulm;
@@ -138,11 +142,11 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
             const fechaRecomendado = new Date(fechaIngreso.getTime() + (fechaCulminacion.getTime() - fechaIngreso.getTime()) / 2);
 
             await saveData('tareas', {
-              nombre: accion.tarea,
+              nombre: sanitizedAccion.tarea || sanitizedAccion.nombre || "Nueva Tarea",
               ingreso: fechaIngreso.toISOString(),
               recomendado: fechaRecomendado.toISOString(),
               culminacion: fechaCulminacion.toISOString(),
-              criticidad: 5,
+              criticidad: sanitizedAccion.criticidad || 5,
               estado: EstadoTarea.PENDIENTE,
               prioridad: PrioridadTarea.MEDIA
             });
@@ -151,7 +155,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
 
           case 'nota':
             await saveData('notas', {
-              contenido: accion.texto || trimmedInput,
+              contenido: sanitizedAccion.texto || sanitizedAccion.contenido || trimmedInput,
               timestamp: new Date().toISOString()
             });
             break;
