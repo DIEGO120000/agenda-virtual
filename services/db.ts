@@ -18,7 +18,7 @@ const getUserCollectionRef = (collectionName: string) => {
   return collection(db, 'usuarios', user.uid, collectionName);
 };
 
-const sanitizeData = (collectionName: string, data: any) => {
+const sanitizeData = (collectionName: string, data: any, isUpdate = false) => {
   const sanitized = { ...data };
   
   // Limpieza universal contra undefined (regla estricta de Firebase)
@@ -28,8 +28,8 @@ const sanitizeData = (collectionName: string, data: any) => {
     }
   });
 
-  // Reglas específicas para el Horario
-  if (collectionName === 'horario') {
+  // Solo aplicar valores por defecto si NO es una actualización
+  if (collectionName === 'horario' && !isUpdate) {
     return {
       dia: sanitized.dia || "Pendiente",
       hora: sanitized.hora || sanitized.hora_inicio || "Pendiente",
@@ -50,7 +50,7 @@ const sanitizeData = (collectionName: string, data: any) => {
 export const saveData = async (collectionName: string, data: any) => {
   try {
     const colRef = getUserCollectionRef(collectionName);
-    const sanitized = sanitizeData(collectionName, data);
+    const sanitized = sanitizeData(collectionName, data, false);
     const docRef = await addDoc(colRef, {
       ...sanitized,
       userId: auth.currentUser?.uid, // Redundancia de seguridad
@@ -107,7 +107,7 @@ export const updateMyData = async (collectionName: string, docId: string, update
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
     const docRef = doc(db, 'usuarios', user.uid, collectionName, docId);
-    const sanitized = sanitizeData(collectionName, updates);
+    const sanitized = sanitizeData(collectionName, updates, true);
     await updateDoc(docRef, sanitized);
   } catch (error) {
     throw error;

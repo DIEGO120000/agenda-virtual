@@ -72,10 +72,15 @@ const App: React.FC = () => {
   // Handlers sincronizados con DB
   const handleUpdateHorario = async (id: string, updates: Partial<EventoHorario>) => {
     const oldEvento = state.horario.find(e => e.id === id);
+    
+    // 1. Siempre actualizar el documento específico con TODOS los cambios solicitados
+    await updateMyData('horario', id, updates);
+
+    // 2. Si el nombre de la materia (actividad) cambió, propagar ese cambio a otros documentos
     if (oldEvento && updates.actividad && updates.actividad !== oldEvento.actividad) {
-      // Propagar cambio de nombre a todas las entradas del horario con el mismo nombre
-      const sameSubjects = state.horario.filter(e => e.actividad === oldEvento.actividad);
-      for (const s of sameSubjects) {
+      // Propagar cambio de nombre a todas las DEMÁS entradas del horario con el mismo nombre antiguo
+      const otherSessions = state.horario.filter(e => e.actividad === oldEvento.actividad && e.id !== id);
+      for (const s of otherSessions) {
         await updateMyData('horario', s.id, { actividad: updates.actividad });
       }
       // Propagar a calificaciones
@@ -83,8 +88,6 @@ const App: React.FC = () => {
       for (const calif of relatedCalifs) {
         await updateMyData('calificaciones', calif.id, { materia: updates.actividad });
       }
-    } else {
-      await updateMyData('horario', id, updates);
     }
   };
 
