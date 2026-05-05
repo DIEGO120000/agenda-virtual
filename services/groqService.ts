@@ -10,37 +10,35 @@ export const analizarComando = async (texto: string) => {
   const fechaActual = now.toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
   const isoNow = now.toISOString();
 
-  const prompt = `ERES UN CLASIFICADOR Y EDITOR ESTRICTO. EVALÚA EL INPUT PASO A PASO:
+  const prompt = `ERES UN CLASIFICADOR ESTRICTO. Debes clasificar la información extraída en 'materia', 'tarea' o 'nota' usando ÚNICAMENTE estas reglas absolutas:
   
   REFERENCIA TEMPORAL ABSOLUTA: ${fechaActual} (ISO: ${isoNow}).
   Analiza: "${texto}".
   
-  REGLAS ABSOLUTAS DE CLASIFICACIÓN Y EDICIÓN:
-  1. PRIORIDAD DE MATERIAS: Cuando el usuario te dicte sus materias, días, horas y profesores (ej. "estas son mis materias..."), tu ÚNICA acción estructural debe ser agregarlas o actualizarlas en la sección de HORARIO/MATERIAS (tipo: "horario"). NUNCA las agregues directamente a calificaciones.
+  REGLAS ABSOLUTAS DE CLASIFICACIÓN:
   
-  2. ESQUEMA ESTRICTO PARA MATERIAS (HORARIO): Cuando detectes una materia, DEBES devolver un objeto JSON con EXACTAMENTE estas claves:
-     - "dia": El día de la semana explícito en TEXTO PLANO (Ej. "Lunes", "Martes", "Sábado"). ESTÁ ESTRICTAMENTE PROHIBIDO devolver fechas ISO o marcas de tiempo. Si dice "Autogestionada" o "Pendiente", pon "Pendiente".
-     - "hora_inicio": La hora exacta de inicio (Ej. "8:00 AM").
-     - "hora_fin": La hora exacta de fin (Ej. "11:00 AM"). REGLA DE CIERRE: El horario institucional termina a las 10:00 PM. Ninguna materia puede terminar después de esa hora; si el usuario sugiere una hora posterior, cámbiala a "10:00 PM".
-     - "nombre": El nombre de la materia sin asteriscos.
-     - "profesor": El nombre del profesor.
-     - "modalidad": "Virtual", "Presencial" o "Semipresencial".
-
-  3. MODIFICACIÓN: Si el usuario pide cambiar, corregir o actualizar algo existente (ej. "cambia la hora de la clase de Matemáticas" o "actualiza la fecha de la tarea X"), DEBES usar el tipo "modificacion". Identifica el objetivo (tareas/notas/horario) y el nombre del registro.
+  REGLA 1 - MATERIA (HORARIO):
+  - OBLIGATORIO: Debe tener Nombre de la materia, Día de la semana, Hora de inicio y Hora de culminación.
+  - EXCEPCIÓN: Solo será materia si falta algún dato SÍ Y SOLO SÍ el usuario declara explícitamente que no lo tiene (ej. 'No sé a qué hora es').
+  - Si falta la hora o el día y no hay justificación explícita, NO ES MATERIA.
   
-  4. TAREAS vs NOTAS: Para que sea una TAREA nueva, el usuario DEBE dictar explícitamente una fecha u hora de culminación exacta.
+  REGLA 2 - TAREA:
+  - OBLIGATORIO: Debe tener una acción a realizar Y un día ESPECÍFICO de culminación.
+  - VÁLIDO COMO ESPECÍFICO: 'Mañana', 'pasado mañana', 'el jueves', 'el 15 de mayo'.
+  - INVÁLIDO (AMBIGUO): 'Esta semana', 'este mes', 'este año', 'pronto'. Si el tiempo es ambiguo, ESTÁ PROHIBIDO clasificarlo como tarea. Pasa a ser NOTA.
   
-  5. REGLA DE ORO: Si identificas una acción pero EL USUARIO NO DICTÓ FECHA DE CULMINACIÓN, ESTÁ ESTRICTAMENTE PROHIBIDO INVENTARLA. Clasifícalo como NOTA (tipo: "nota").
-  
-  6. Si es información general o el tiempo es ambiguo, CLASIFÍCALO COMO NOTA.
+  REGLA 3 - NOTA:
+  - DEFINICIÓN: Todo lo que no cumpla estrictamente con la Regla 1 o Regla 2.
+  - CASO A: Información sin tiempo absoluto (ej. 'Emmanuel me debe $500').
+  - CASO B: Acciones con tiempos ambiguos (ej. 'En esta semana tengo que bailar con Anastasia'). Al no decir un día exacto, es automáticamente una nota.
 
   Formato de salida JSON (ESTRICTO):
   {
     "actions": [
-      { "tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "nombre_o_id", "nuevos_datos": { "campo": "valor" } },
+      { "tipo": "materia", "dia": "Lunes/Martes...", "hora_inicio": "...", "hora_fin": "...", "nombre": "...", "profesor": "...", "modalidad": "..." },
       { "tipo": "tarea", "tarea": "...", "culminacion": "ISO_DATE" },
       { "tipo": "nota", "texto": "..." },
-      { "tipo": "horario", "dia": "...", "hora_inicio": "...", "hora_fin": "...", "nombre": "...", "profesor": "...", "modalidad": "..." }
+      { "tipo": "modificacion", "objetivo": "tareas/notas/horario", "identificador": "nombre_o_id", "nuevos_datos": { "campo": "valor" } }
     ],
     "respuesta": "Resumen natural consolidado de las acciones realizadas."
   }

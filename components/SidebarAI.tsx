@@ -121,6 +121,7 @@ const SidebarAI: React.FC<Props> = ({ state }) => {
             break;
           }
 
+          case 'materia':
           case 'horario':
             await saveData('horario', {
               actividad: (sanitizedAccion.materia || sanitizedAccion.nombre || sanitizedAccion.actividad || "Sin Nombre").toUpperCase(),
